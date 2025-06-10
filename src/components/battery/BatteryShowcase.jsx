@@ -194,7 +194,7 @@ const BatteryShowcase = ({
       if (!allModelsLoaded) {
         setModelsLoaded([true, true, true, true]);
       }
-    }, 15000); // 15 seconds timeout
+    }, 100); // 15 seconds timeout
 
     return () => clearTimeout(forceLoadTimer);
   }, [allModelsLoaded]);
@@ -207,7 +207,7 @@ const BatteryShowcase = ({
         if (!allModelsLoaded) {
           setModelsLoaded([true, true, true, true]);
         }
-      }, 3000);
+      }, 100);
     }
 
     window.addEventListener("webglcontextlost", handleContextLost);
