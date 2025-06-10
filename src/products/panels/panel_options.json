@@ -1,0 +1,70 @@
+{
+    "solarPanels": [
+      {
+        "brand": "Ureco",
+        "model": "400",
+        "wattage": 400,
+        "efficiency": 21.3,
+        "warranty": "25 years",
+        "specs": {
+          "description": "High-efficiency panels with excellent value",
+          "cellType": "Monocrystalline PERC",
+          "temperatureCoefficient": "-0.35%/°C",
+          "frame": "Anodized aluminum",
+          "dimensions": "1755 x 1038 x 35mm"
+        },
+        "keyFeatures": [
+          "High power density",
+          "Excellent low-light performance",
+          "PID resistance",
+          "Salt mist and ammonia resistance",
+          "Hail impact resistance",
+          "25 year warranty"
+        ]
+      },
+      {
+        "brand": "REC",
+        "model": "Alpha Pure-R",
+        "wattage": 430,
+        "efficiency": 22.3,
+        "warranty": "25 years",
+        "specs": {
+          "description": "Premium panels with industry-leading efficiency and warranty",
+          "cellType": "Monocrystalline PERC",
+          "temperatureCoefficient": "-0.35%/°C",
+          "frame": "Anodized aluminum",
+          "dimensions": "1755 x 1038 x 35mm"
+        },
+        "keyFeatures": [
+          "High power density",
+          "Excellent low-light performance",
+          "PID resistance",
+          "Salt mist and ammonia resistance",
+          "Hail impact resistance",
+          "25 year warranty"
+        ]
+      },
+      {
+        "brand": "LG",
+        "model": "NeON H+",
+        "wattage": 415,
+        "efficiency": 21.3,
+        "warranty": "25 years",
+        "specs": {
+          "description": "Premium panels with advanced technology",
+          "cellType": "Monocrystalline PERC",
+          "temperatureCoefficient": "-0.35%/°C",
+          "frame": "Anodized aluminum",
+          "dimensions": "1755 x 1038 x 35mm"
+        },
+        "keyFeatures": [
+          "High power density",
+          "Excellent low-light performance",
+          "PID resistance",
+          "Salt mist and ammonia resistance",
+          "Hail impact resistance",
+          "25 year warranty"
+        ]
+      }
+    ]
+  }

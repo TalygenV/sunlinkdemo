@@ -1,0 +1,1152 @@
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertCircle,
+  ArrowRight,
+  ChevronLeft,
+  DollarSign,
+  Search,
+  Zap,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { AnalyticsEvents, trackEvent } from "../../lib/analytics";
+import CallToAction from "../sections/CallToAction";
+import { GenabilityData, SolarData, Tariff } from "@/types";
+
+interface DesignFormProps {
+  onBack: () => void;
+}
+
+const inputVariants = {
+  focus: { scale: 1.02, transition: { type: "spring", stiffness: 400 } },
+};
+
+const containerVariants = {
+  initial: { opacity: 0, scale: 0.98 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.98 },
+};
+
+// Helper function to check if a point is inside a bounding box
+function isPointInBoundingBox(
+  point: { lat: number; lng: number },
+  boundingBox: {
+    ne: { latitude: number; longitude: number };
+    sw: { latitude: number; longitude: number };
+  }
+): boolean {
+  return (
+    point.lat >= boundingBox.sw.latitude &&
+    point.lat <= boundingBox.ne.latitude &&
+    point.lng >= boundingBox.sw.longitude &&
+    point.lng <= boundingBox.ne.longitude
+  );
+}
+
+// Error component for when address is not supported
+const AddressNotSupportedError = () => (
+  <motion.div
+    variants={containerVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    className="flex flex-col items-center justify-center h-[600px] text-center relative"
+  >
+    <motion.div
+      className="absolute -inset-8 rounded-3xl"
+      animate={{
+        opacity: [0.2, 0.4, 0.4, 0.2],
+        scale: [1, 1.015, 1.015, 1],
+      }}
+      transition={{
+        duration: 12,
+        repeat: Infinity,
+        ease: [0.4, 0, 0.2, 1],
+        times: [0, 0.4, 0.6, 1],
+        repeatType: "loop",
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 via-white/10 to-red-500/20 rounded-3xl blur-[60px] opacity-60" />
+    </motion.div>
+
+    <div className="relative z-10 bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 p-8 max-w-md">
+      <AlertCircle className="w-16 h-16 text-red-500 mb-4 mx-auto icon-glow-red" />
+      <h2 className="text-2xl font-light text-white mb-4">
+        Address Not Supported
+      </h2>
+      <p className="text-gray-400 mb-6">
+        Sorry, your address is not supported yet.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white text-sm transition-all duration-300"
+      >
+        Exit
+      </button>
+    </div>
+  </motion.div>
+);
+
+export default function DesignForm({ onBack }: DesignFormProps) {
+  const [showKwh, setShowKwh] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [address, setAddress] = useState({ lat: 0, lng: 0 });
+  const [formattedAddress, setFormattedAddress] = useState("");
+  const [solarData, setSolarData] = useState<SolarData | null>(null);
+  const [isAddressSupported, setIsAddressSupported] = useState(true);
+  const [genabilityData, setGenabilityData] = useState<GenabilityData | null>(
+    null
+  );
+  const [monthlyBill, setMonthlyBill] = useState<number>(0);
+  const [monthlyConsumption, setMonthlyConsumption] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const addressInputRef = useRef<HTMLInputElement>(null);
+
+  // Fallback API keys (for debugging only; move to backend in production)
+  // const GENABILITY_APP_ID =
+  //   import.meta.env.VITE_GENABILITY_APP_ID ||
+  //   "db91730b-5e06-47b5-b720-772d79852505";
+  // const GENABILITY_API_KEY =
+  //   import.meta.env.VITE_GENABILITY_API_KEY ||
+  //   "e9fd3859-80a0-4802-86b1-add58689c540";
+
+  const GENABILITY_APP_ID =
+    import.meta.env.GENABILITY_APP_ID || "db91730b-5e06-47b5-b720-772d79852505";
+  const GENABILITY_API_KEY =
+    import.meta.env.GENABILITY_API_KEY ||
+    "e9fd3859-80a0-4802-86b1-add58689c540";
+
+  const fetchUtilityAndTariff = async () => {
+    try {
+      if (!address.lat || !address.lng || monthlyBill <= 0) {
+        throw new Error("Please provide a valid address and monthly bill.");
+      }
+
+      if (!GENABILITY_APP_ID || !GENABILITY_API_KEY) {
+        throw new Error("Genability API credentials are missing.");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      // Validate coordinates
+      if (
+        address.lat < -90 ||
+        address.lat > 90 ||
+        address.lng < -180 ||
+        address.lng > 180
+      ) {
+        throw new Error("Invalid coordinates provided.");
+      }
+
+      // Fetch territory data
+      const territoryRes = await fetch(
+        `https://api.genability.com/rest/public/territories?latitude=${address.lat}&longitude=${address.lng}&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}`
+      );
+      if (!territoryRes.ok) {
+        throw new Error(
+          `Territory API error: ${territoryRes.status} ${territoryRes.statusText}`
+        );
+      }
+
+      const territoryData = await territoryRes.json();
+      const territory = territoryData.results?.[0];
+
+      if (!territory || !territory.lseId) {
+        throw new Error("No valid utility found for this location.");
+      }
+
+      const lseId = territory.lseId;
+      console.log("lseId:", lseId, "Utility Name:", territory.lseName);
+
+      // Fetch tariff data with pagination, targeting active tariffs
+      let validTariff = null;
+      let page = 1;
+      const pageSize = 25;
+      const today = new Date().toISOString().split("T")[0]; // Current date for effectiveOn
+
+      while (!validTariff) {
+        const tariffRes = await fetch(
+          `https://api.genability.com/rest/public/tariffs?lseId=${lseId}&customerClasses=RESIDENTIAL&effectiveOn=${today}&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}&start=${
+            (page - 1) * pageSize + 1
+          }&pageCount=${pageSize}`
+        );
+        if (!tariffRes.ok) {
+          throw new Error(
+            `Tariff API error: ${tariffRes.status} ${tariffRes.statusText}`
+          );
+        }
+
+        const tariffData = await tariffRes.json();
+        console.log("Tariff data:", tariffData);
+        console.log(
+          "Tariff results:",
+          JSON.stringify(tariffData.results, null, 2)
+        );
+
+        if (!tariffData.results || tariffData.results.length === 0) {
+          throw new Error("No tariffs returned by the API.");
+        }
+
+        validTariff = tariffData.results.find(
+          (tariff: Tariff) => tariff.rateBands && tariff.rateBands.length > 0
+        );
+
+        if (!validTariff && tariffData.count > page * pageSize) {
+          page++;
+        } else if (!validTariff) {
+          console.warn(
+            "No tariffs with rateBands found, using fallback tariff."
+          );
+          validTariff =
+            tariffData.results.find(
+              (tariff: Tariff) =>
+                tariff.tariffType === "DEFAULT" ||
+                tariff.tariffType === "STANDARD"
+            ) || tariffData.results[0];
+        } else {
+          break;
+        }
+      }
+
+      // Use utility-specific fallback price if no rateBands (e.g., SCE average)
+      const pricePerKwh =
+        validTariff.rateBands?.[0]?.rateAmount ||
+        (lseId === 1228 ? 0.28 : 0.15); // SCE average ~$0.28/kWh
+      const estimatedMonthlyKwh = monthlyBill / pricePerKwh;
+      const recommendedSizeKw = (estimatedMonthlyKwh * 12) / 1500; // 1500 kWh/kW/year
+      const estimatedAnnualSavings =
+        estimatedMonthlyKwh * 12 * pricePerKwh * 0.8; // 80% savings
+
+      return {
+        utilityName: territory.lseName || "Unknown Utility",
+        pricePerKwh,
+        estimatedMonthlyKwh,
+        recommendedSizeKw,
+        estimatedAnnualSavings,
+      };
+    } catch (error: unknown) {
+      console.error("Genability API error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to fetch utility data."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchSolarData = async (lat: number, lng: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setShowResults(true);
+      setIsAddressSupported(true);
+      trackEvent(AnalyticsEvents.FORM_START, { step: "solar_data" });
+
+      // Validate coordinates
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        throw new Error("Invalid coordinates provided.");
+      }
+
+      const response = await fetch(
+        `https://solar.googleapis.com/v1/buildingInsights:findClosest?location.latitude=${lat}&location.longitude=${lng}&key=${
+          import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+        }`
+      );
+      const data = await response.json();
+      console.log("Solar data:", data);
+
+      if (data.error) {
+        throw new Error(
+          `Solar API error: ${data.error.message} (Code: ${data.error.code})`
+        );
+      }
+
+      let addressSupported = true;
+
+      if (data.boundingBox && data.boundingBox.ne && data.boundingBox.sw) {
+        addressSupported = isPointInBoundingBox({ lat, lng }, data.boundingBox);
+      }
+
+      if (
+        !data.solarPotential ||
+        !data.solarPotential.solarPanels ||
+        data.solarPotential.solarPanels.length < 10
+      ) {
+        addressSupported = false;
+      }
+
+      console.log("addressSupported:", addressSupported);
+      console.log("monthlyConsumption:", monthlyConsumption);
+      console.log(
+        "solarPanels length:",
+        data?.solarPotential?.solarPanels?.length
+      );
+      setIsAddressSupported(addressSupported);
+      const fallbackSolarData = {
+        name: formattedAddress,
+        coordinates: { latitude: lat, longitude: lng },
+        postalCode: data.postalCode || "",
+        administrativeArea: data.administrativeArea || "",
+        isAutoPanelsSupported: false,
+      };
+
+      if (
+        !addressSupported &&
+        (!monthlyConsumption || monthlyConsumption <= 0)
+      ) {
+        setShowKwh(true);
+        setError(
+          "This address requires manual design. Please enter your average monthly energy consumption (kWh)."
+        );
+        setShowResults(false);
+        setIsLoading(false);
+        return fallbackSolarData; // instead of `null`
+      }
+
+      const processedData = addressSupported
+        ? {
+            ...data,
+            isAutoPanelsSupported: true,
+            coordinates: { latitude: lat, longitude: lng },
+          }
+        : fallbackSolarData;
+
+      setSolarData(processedData);
+      trackEvent(AnalyticsEvents.FORM_COMPLETE, { step: "solar_data" });
+      return processedData;
+    } catch (error: unknown) {
+      console.error("Error fetching solar data:", error);
+      trackEvent(AnalyticsEvents.FORM_ABANDON, {
+        step: "solar_data",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      setError(
+        "Unable to fetch solar data for this location. Please try another address."
+      );
+      setShowResults(false);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (addressInputRef.current && window.google) {
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        addressInputRef.current,
+        {
+          componentRestrictions: { country: "us" },
+          fields: ["address_components", "formatted_address", "geometry"],
+          types: ["address"],
+        }
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (place.geometry?.location) {
+          setFormattedAddress(place.formatted_address || "");
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          setAddress({ lat, lng });
+        }
+      });
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address.lat || !address.lng || monthlyBill <= 0) {
+      setError("Please enter a valid address and monthly bill.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const genabilityInfo = await fetchUtilityAndTariff();
+      const solarInfo = await fetchSolarData(address.lat, address.lng);
+      console.log("solarInfo", solarInfo);
+      console.log("genabilityInfo", genabilityInfo);
+
+      if (genabilityInfo) {
+        setGenabilityData(genabilityInfo);
+        setSolarData(solarInfo); // Update state here
+        setShowResults(true);
+      } else {
+        setError("Failed to process data. Please try again.");
+      }
+    } catch (err: unknown) {
+      console.error("Error fetching data:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch utility or solar data."
+      );
+      setShowResults(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isAddressSupported && !showKwh) {
+    return <AddressNotSupportedError />;
+  }
+
+  if (showResults && genabilityData && solarData) {
+    return (
+      <>
+        <h1 className="text-3xl md:text-5xl lg:text-6xl font-medium text-white text-center mb-16 md:mb-24">
+          Solar for you, not sales people
+        </h1>
+
+        <div className="w-full max-w-[1200px] mb-32">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center mb-3">
+                <span className="text-2xl font-medium text-blue-500 mr-3">
+                  1
+                </span>
+                <div className="w-10 h-10 flex items-center justify-center text-white">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-home w-6 h-6"
+                  >
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-base font-medium text-white">
+                Create YOUR custom design with our advanced AI design tool
+              </h3>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center mb-3">
+                <span className="text-2xl font-medium text-blue-500 mr-3">
+                  2
+                </span>
+                <div className="w-10 h-10 flex items-center justify-center text-white">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-sun w-6 h-6"
+                  >
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2"></path>
+                    <path d="M12 20v2"></path>
+                    <path d="m4.93 4.93 1.41 1.41"></path>
+                    <path d="m17.66 17.66 1.41 1.41"></path>
+                    <path d="M2 12h2"></path>
+                    <path d="M20 12h2"></path>
+                    <path d="m6.34 17.66-1.41 1.41"></path>
+                    <path d="m19.07 4.93-1.41 1.41"></path>
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-base font-medium text-white">
+                Choose your plan
+              </h3>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center mb-3">
+                <span className="text-2xl font-medium text-blue-500 mr-3">
+                  3
+                </span>
+                <div className="w-10 h-10 flex items-center justify-center text-white">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-camera w-6 h-6"
+                  >
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                    <circle cx="12" cy="13" r="3"></circle>
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-base font-medium text-white">
+                Upload photos of your home
+              </h3>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center mb-3">
+                <span className="text-2xl font-medium text-blue-500 mr-3">
+                  4
+                </span>
+                <div className="w-10 h-10 flex items-center justify-center text-white">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-wrench w-6 h-6"
+                  >
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-base font-medium text-white">
+                Get installed
+              </h3>
+            </div>
+          </div>
+        </div>
+
+        <CallToAction
+          data={{
+            ...solarData,
+            ...genabilityData,
+            name: formattedAddress,
+            targetMonthlyBill: monthlyBill,
+            isAutoPanelsSupported: isAddressSupported,
+            coordinates: {
+              latitude: address.lat,
+              longitude: address.lng,
+            },
+          }}
+          monthlyConsumption={showKwh ? monthlyConsumption : 0}
+          onContinue={() => {
+            /* Handle continue */
+          }}
+          onBack={() => setShowResults(false)}
+        />
+
+        <p className="mt-12 text-gray-300 text-base md:text-lg text-center mb-8 md:mb-12 max-w-2xl">
+          Choose your preferred plan
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-[1200px] place-items-stretch mb-20">
+          <div
+            className="relative flex flex-col justify-between h-auto min-h-[500px] bg-white backdrop-blur-sm 
+                rounded-2xl p-8 md:p-10 transition-all duration-500 cursor-pointer group 
+                hover:shadow-lg border bg-opacity-5 border-gray-100 border-opacity-10 hover:bg-opacity-10"
+          >
+            <div className="w-16 md:w-20 h-16 md:h-20 mb-8 text-white opacity-90">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-sun w-full h-full"
+              >
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2"></path>
+                <path d="M12 20v2"></path>
+                <path d="m4.93 4.93 1.41 1.41"></path>
+                <path d="m17.66 17.66 1.41 1.41"></path>
+                <path d="M2 12h2"></path>
+                <path d="M20 12h2"></path>
+                <path d="m6.34 17.66-1.41 1.41"></path>
+                <path d="m19.07 4.93-1.41 1.41"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-medium text-white mb-4">
+                Solar Savings Plan
+              </h2>
+              <p className="text-gray-300 mb-6 max-w-xl text-base md:text-lg leading-relaxed">
+                Essential solar power system for your home
+              </p>
+              <div className="space-y-3 mb-8">
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    Tier 1 black solar panels
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    Inverter included
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    10 year roof warranty
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    24/7 monitoring
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-red-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-x w-3 h-3 text-red-500"
+                    >
+                      <path d="M18 6 6 18"></path>
+                      <path d="m6 6 12 12"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    Backup power system
+                  </span>
+                </div>
+              </div>
+              <div
+                className="inline-flex items-center text-white text-base md:text-lg transition-all duration-300 
+                      group-hover:translate-x-2"
+              >
+                <span className="mr-2 font-medium">Design my system</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-arrow-right w-5 h-5 md:w-6 md:h-6"
+                >
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div
+            className="relative flex flex-col justify-between h-auto min-h-[500px] bg-white backdrop-blur-sm 
+                rounded-2xl p-8 md:p-10 transition-all duration-500 cursor-pointer group 
+                hover:shadow-lg border bg-opacity-10 border-blue-500/30 hover:bg-opacity-15"
+          >
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-500 rounded-full text-sm font-medium">
+              Recommended
+            </div>
+            <div className="w-16 md:w-20 h-16 md:h-20 mb-8 text-white opacity-90">
+              <div className="relative w-full h-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-battery w-full h-full"
+                >
+                  <rect width="16" height="10" x="2" y="7" rx="2" ry="2"></rect>
+                  <line x1="22" x2="22" y1="11" y2="13"></line>
+                </svg>
+                <motion.div
+                  className="absolute inset-[15%] right-[35%] bg-white rounded-sm"
+                  initial={{ width: "0%", opacity: 0 }}
+                  animate={{ width: "50%", opacity: 0.2 }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    repeatType: "reverse",
+                    ease: "easeInOut",
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-medium text-white mb-4">
+                Solar + Storage
+              </h2>
+              <p className="text-gray-300 mb-6 max-w-xl text-base md:text-lg leading-relaxed">
+                Complete solar system with backup power
+              </p>
+              <div className="space-y-3 mb-8">
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    Tier 1 black solar panels
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    Inverter included
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    10 year roof warranty
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    24/7 monitoring
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                            bg-green-500/20"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-check w-3 h-3 text-green-500"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 text-sm md:text-base">
+                    Backup power system
+                  </span>
+                </div>
+              </div>
+              <div
+                className="inline-flex items-center text-white text-base md:text-lg transition-all duration-300 
+                      group-hover:translate-x-2"
+              >
+                <span className="mr-2 font-medium">Design my system</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-arrow-right w-5 h-5 md:w-6 md:h-6"
+                >
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <motion.div
+      key="design-form-container"
+      className="w-full"
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.4 }}
+    >
+      {/* {showResults && genabilityData && (
+        <UtilityResultsPopup
+          genabilityData={genabilityData}
+          onClose={() => setShowResults(false)}
+        />
+      )} */}
+      <div className="relative w-full max-w-2xl mx-auto">
+        <motion.div
+          className="absolute -inset-8 rounded-3xl"
+          animate={{
+            opacity: [0.2, 0.4, 0.4, 0.2],
+            scale: [1, 1.015, 1.015, 1],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: [0.4, 0, 0.2, 1],
+            times: [0, 0.4, 0.6, 1],
+            repeatType: "loop",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-white/20 to-blue-500/20 rounded-3xl blur-[60px] opacity-60" />
+        </motion.div>
+
+        <motion.div
+          className="relative z-10 mx-4 md:mx-8 bg-black/40 backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden p-6 sm:p-8 md:p-12"
+          animate={{
+            boxShadow: [
+              "0 0 20px 0 rgba(255,255,255,0.1)",
+              "0 0 25px 2px rgba(255,255,255,0.12)",
+              "0 0 25px 2px rgba(255,255,255,0.12)",
+              "0 0 20px 0 rgba(255,255,255,0.1)",
+            ],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: [0.4, 0, 0.2, 1],
+            times: [0, 0.4, 0.6, 1],
+            repeatType: "loop",
+          }}
+        >
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="relative text-center mb-8 md:mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-transparent bg-clip-text bg-gradient-to-b from-white to-white/80 mb-4">
+              Design Your Solar System
+            </h2>
+            <p className="text-gray-400 text-lg">
+              Enter your address and average electric bill to estimate savings
+            </p>
+          </motion.div>
+
+          <form onSubmit={handleSubmit} className="relative space-y-10">
+            <motion.div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-400 tracking-wide uppercase">
+                Property Address
+              </label>
+              <motion.div
+                className="relative group"
+                whileFocus="focus"
+                variants={inputVariants}
+              >
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-white transition-colors duration-300" />
+                <input
+                  type="text"
+                  ref={addressInputRef}
+                  placeholder="Enter your address"
+                  className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/60 transition-all duration-300"
+                />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              </motion.div>
+            </motion.div>
+
+            <AnimatePresence mode="wait">
+              {!showKwh ? (
+                <motion.div
+                  key="bill-input"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-3"
+                >
+                  <label className="block text-sm font-medium text-gray-400 tracking-wide uppercase">
+                    Average Electric Bill
+                  </label>
+                  <motion.div
+                    className="relative group"
+                    whileFocus="focus"
+                    variants={inputVariants}
+                  >
+                    <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-white transition-colors duration-300" />
+                    <input
+                      type="number"
+                      placeholder="e.g. 150"
+                      value={monthlyBill || ""}
+                      onChange={(e) => setMonthlyBill(Number(e.target.value))}
+                      className="w-full pl-14 pr-16 py-5 bg-black/40 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/60 transition-all duration-300"
+                    />
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors duration-300">
+                      /mo
+                    </span>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  </motion.div>
+                  <button
+                    type="button"
+                    onClick={() => setShowKwh(true)}
+                    className="text-sm text-accent-400 hover:text-accent-300 transition-colors duration-300 mt-2"
+                  >
+                    or enter your monthly consumption
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="kwh-input"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-3"
+                >
+                  <label className="block text-sm font-medium text-gray-400 tracking-wide uppercase">
+                    Monthly Energy Usage
+                  </label>
+                  <motion.div
+                    className="relative group"
+                    whileFocus="focus"
+                    variants={inputVariants}
+                  >
+                    <Zap className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-white transition-colors duration-300" />
+                    <input
+                      type="number"
+                      placeholder="e.g. 1000"
+                      value={monthlyConsumption || ""}
+                      onChange={(e) =>
+                        setMonthlyConsumption(Number(e.target.value))
+                      }
+                      className="w-full pl-14 pr-16 py-5 bg-black/40 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/60 transition-all duration-300"
+                    />
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors duration-300">
+                      kWh
+                    </span>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  </motion.div>
+                  <button
+                    type="button"
+                    onClick={() => setShowKwh(false)}
+                    className="text-sm text-accent-400 hover:text-accent-300 transition-colors duration-300 mt-2"
+                  >
+                    or enter your monthly electricity bill
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <p className="text-red-400 text-sm font-medium">{error}</p>
+                </div>
+              </motion.div>
+            )}
+
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-blue-400 text-sm font-medium">
+                    Loading...
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row gap-6 pt-8">
+              <motion.button
+                type="button"
+                onClick={onBack}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative z-10 w-full h-[52px] flex items-center justify-center gap-3 px-8 text-white rounded-full shadow-xl transition-all duration-500 border border-white/10 bg-white/5 hover:bg-white/10 text-sm font-medium tracking-wider group"
+              >
+                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
+                Back
+              </motion.button>
+
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={
+                  isLoading || !address.lat || !address.lng || monthlyBill <= 0
+                }
+                className="relative z-10 w-full h-[52px] flex items-center justify-center gap-3 px-8 text-white rounded-full shadow-xl transition-all duration-500 bg-blue-500 hover:bg-blue-600 text-sm font-medium tracking-wider group disabled:opacity-50"
+              >
+                Continue
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+              </motion.button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}

@@ -1,0 +1,60 @@
+TypeScript and Google Maps 
+
+bookmark_border
+ 
+TypeScript is a typed superset of JavaScript that compiles to plain JavaScript. The snippet below demonstrates simple usage of Google Maps using TypeScript.
+
+
+let map: google.maps.Map;
+const center: google.maps.LatLngLiteral = {lat: 30, lng: -110};
+
+function initMap(): void {
+  map = new google.maps.Map(document.getElementById("map") as HTMLElement, {
+    center,
+    zoom: 8
+  });
+}
+Getting Started
+The DefinitelyTyped project is an open source projects that maintains type declaration files for many packages including Google Maps. The Google Maps JavaScript declaration files (see source files on GitHub) can be installed using NPM from the @types/google.maps package.
+
+
+npm i -D @types/google.maps
+Note: These types are automatically generated. To report an issue with these types, please open a support ticket.
+Alpha and Beta Features
+The types typically do not have the properties, functions, or classes found in alpha or beta releases. In many of these cases, the object can be cast to the correct type.
+
+The following error is caused by the mapId beta property for MapOptions.
+
+
+error TS2345: Argument of type '{ center: google.maps.LatLng; zoom: number;
+mapId: string; }' is not assignable to parameter of type 'MapOptions'. Object
+literal may only specify known properties, and 'mapId' does not exist in type
+'MapOptions'.
+The above error can be corrected with the cast below.
+
+
+{ center: {lat: 30, lng: -110}, zoom: 8, mapId: '1234' } as google.maps.MapOptions
+Conflicting @types packages
+Some libraries may use a package other than @types/google.maps, which may cause conflicts. Use the skipLibCheck compiler option to avoid issues with inconsistent types.
+
+
+{
+  "compilerOptions": {
+    "skipLibCheck": true
+  }
+}
+Specifying typeRoots
+Some frameworks such as Angular may require specifying the typeRoots compiler option to include types installed from @types/google.maps and all other "@types" packages.
+
+Note: By default all visible ”@types” packages are included in your compilation. Packages in node_modules/@types of any enclosing folder are considered visible.
+
+{
+    ...
+    "compilerOptions": {
+        ...
+        "typeRoots": [
+            "node_modules/@types",
+        ],
+        ...
+    }
+}

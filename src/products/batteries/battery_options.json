@@ -1,0 +1,80 @@
+[
+    {
+      "name": "Tesla Powerwall 3",
+      "capacity": 13.5,
+      "unit": "kWh",
+      "warranty": 10,
+      "warrantyUnit": "years",
+      "price": 12000,
+      "currency": "USD",
+      "specifications": {
+        "roundTripEfficiency": 90,
+        "depthOfDischarge": 100,
+        "cycleLife": 4000,
+        "operatingTemperature": {
+          "min": -4,
+          "max": 122,
+          "unit": "F"
+        }
+      },
+      "features": [
+        "Integrated inverter and energy management",
+        "Seamless backup power during outages",
+        "Mobile app monitoring and control",
+        "Expandable capacity with multiple units",
+        "Indoor/outdoor rated enclosure"
+      ]
+    },
+    {
+      "name": "Enphase IQ Battery 5P",
+      "capacity": 5,
+      "unit": "kWh",
+      "warranty": 15,
+      "warrantyUnit": "years",
+      "price": 8000,
+      "currency": "USD",
+      "specifications": {
+        "roundTripEfficiency": 90,
+        "depthOfDischarge": 100,
+        "cycleLife": 4000,
+        "operatingTemperature": {
+          "min": -4,
+          "max": 122,
+          "unit": "F"
+        }
+      },
+      "features": [
+        "Integrated inverter and energy management",
+        "Seamless backup power during outages",
+        "Mobile app monitoring and control",
+        "Expandable capacity with multiple units",
+        "Indoor/outdoor rated enclosure"
+      ]
+    },
+    {
+      "name": "Franklin Home Power 2",
+      "capacity": 10,
+      "unit": "kWh",
+      "warranty": 15,
+      "warrantyUnit": "years",
+      "price": 9000,
+      "currency": "USD",
+      "specifications": {
+        "roundTripEfficiency": 90,
+        "depthOfDischarge": 100,
+        "cycleLife": 4000,
+        "operatingTemperature": {
+          "min": -4,
+          "max": 122,
+          "unit": "F"
+        }
+      },
+      "features": [
+        "Integrated inverter and energy management",
+        "Seamless backup power during outages",
+        "Mobile app monitoring and control",
+        "Expandable capacity with multiple units",
+        "Indoor/outdoor rated enclosure"
+      ]
+    }
+  ]

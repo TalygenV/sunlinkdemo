@@ -1,0 +1,38 @@
+
+✔  functions: Finished running predeploy script.
+i  functions: preparing codebase default for deployment
+i  functions: ensuring required API cloudfunctions.googleapis.com is enabled...
+i  functions: ensuring required API cloudbuild.googleapis.com is enabled...
+i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled...
+✔  functions: required API cloudfunctions.googleapis.com is enabled
+✔  artifactregistry: required API artifactregistry.googleapis.com is enabled
+✔  functions: required API cloudbuild.googleapis.com is enabled
+i  functions: Loading and analyzing source code for codebase default to determine what to 
+i  functions: Loading and analyzing source code for codebase default to determine what to deploy
+Serving at port 8755
+
+i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled...
+✔  extensions: required API firebaseextensions.googleapis.com is enabled
+i  functions: Loaded environment variables from .env.
+i  functions: preparing functions directory for uploading...
+i  functions: packaged /Users/awais/Downloads/sunlink-main/functions (87.76 KB) for upload
+i  functions: packaged /Users/awais/Downloads/sunlink-main/functions (87.76 KB) for uploading
+i  functions: ensuring required API run.googleapis.com is enabled...
+i  functions: ensuring required API eventarc.googleapis.com is enabled...
+i  functions: ensuring required API pubsub.googleapis.com is enabled...
+i  functions: ensuring required API storage.googleapis.com is enabled...
+✔  functions: required API run.googleapis.com is enabled
+✔  functions: required API eventarc.googleapis.com is enabled
+✔  functions: required API pubsub.googleapis.com is enabled
+✔  functions: required API storage.googleapis.com is enabled
+i  functions: generating the service identity for pubsub.googleapis.com...
+i  functions: generating the service identity for eventarc.googleapis.com...
+i  functions: Skipping the deploy of unchanged functions.
+✔  functions[mosaicAnalysis(us-central1)] Skipped (No changes detected)
+✔  functions[checkSurveyAvailability(us-central1)] Skipped (No changes detected)
+✔  functions[createStripe(us-central1)] Skipped (No changes detected)
+✔  functions[verifyStripeSession(us-central1)] Skipped (No changes detected)
+✔  functions[testCallable(us-central1)] Skipped (No changes detected)
+
+✔  Deploy complete!
+

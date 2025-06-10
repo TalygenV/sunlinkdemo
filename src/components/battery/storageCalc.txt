@@ -1,0 +1,86 @@
+Solar + Battery Backup Duration Calculator
+This prompt explains how to calculate backup durations for solar + battery systems, accounting for system-specific variables and the non-linear improvement from multiple batteries.
+Key Input Parameters
+
+Battery capacity: Usable capacity per battery (typically 13.5 kWh for Tesla Powerwall)
+Number of batteries: Total number of battery units installed
+Annual solar production: Yearly energy generation in kWh
+Annual home consumption: Yearly energy usage in kWh
+System offset: Percentage of home's energy usage covered by solar (production ÷ consumption)
+
+Load Categories
+
+Essential loads: Critical circuits (refrigeration, select lighting, medical equipment, communications)
+Appliance loads: Essential loads plus major appliances, entertainment, additional lighting
+Whole home loads: Complete home electrical system
+
+Base Load Calculations
+First, calculate the daily loads for different categories:
+CopyDaily home consumption = Annual home consumption ÷ 365
+Based on empirical data:
+
+Essential load = Daily home consumption × 0.08 (8%)
+Appliance load = Daily home consumption × 0.35 (35%)
+Whole home load = Daily home consumption × 1.88 (188%)
+(Note: > 100% accounts for peak usage periods)
+
+Step 1: Calculate Single-Battery Backup Time
+For a single battery system:
+CopySingle battery backup days = Battery capacity ÷ Daily load
+For example, with 13.5 kWh battery and 8,755 kWh annual consumption:
+
+Essential: 13.5 ÷ (8,755 ÷ 365 × 0.08) = 7.0 days
+Appliances: 13.5 ÷ (8,755 ÷ 365 × 0.35) = 1.6 days
+Whole home: 13.5 ÷ (8,755 ÷ 365 × 1.88) = 0.3 days
+
+Step 2: Apply System-Specific Scaling
+Solar production and system offset affect real-world performance. For systems with different specifications than the reference system (9,805 kWh production, 112% offset), adjust the base backup times:
+CopyProduction adjustment factor = New annual production ÷ 9,805
+Offset adjustment factor = New offset ÷ 1.12
+Apply a combined adjustment to the base backup times:
+CopySystem adjustment = (Production adjustment × Offset adjustment)^0.5
+This square root scaling reflects that higher production/offset improves backup time, but not linearly.
+Step 3: Apply Multi-Battery Improvement Factors
+Additional batteries provide disproportionate benefits through improved solar utilization. Apply these empirically-derived factors:
+
+Essential loads:
+CopyBackup days = Min(Single battery backup × (1 + 0.7 × (Number of batteries - 1)), 7)
+Note: Many systems cap reporting for essential loads at 7+ days.
+Appliance loads:
+CopyBackup days = Single battery backup × (1 + 2.5 × (Number of batteries - 1)) × System adjustment
+
+Whole home loads:
+CopyBackup days = Single battery backup × (1 + 3.33 × (Number of batteries - 1)) × System adjustment
+
+
+Example Calculation
+For a new system with:
+
+2 Tesla Powerwalls (13.5 kWh each)
+11,793 kWh annual production
+135% offset
+8,735 kWh annual consumption
+
+Step 1: Calculate single-battery backup
+
+Daily consumption = 8,735 ÷ 365 = 23.93 kWh/day
+Essential load = 23.93 × 0.08 = 1.91 kWh/day
+Essential backup (1 battery) = 13.5 ÷ 1.91 = 7.0 days
+Appliance load = 23.93 × 0.35 = 8.38 kWh/day
+Appliance backup (1 battery) = 13.5 ÷ 8.38 = 1.61 days
+Whole home load = 23.93 × 1.88 = 44.99 kWh/day
+Whole home backup (1 battery) = 13.5 ÷ 44.99 = 0.30 days
+
+Step 2: Calculate system adjustment
+
+Production adjustment = 11,793 ÷ 9,805 = 1.20
+Offset adjustment = 1.35 ÷ 1.12 = 1.21
+System adjustment = (1.20 × 1.21)^0.5 = 1.20
+
+Step 3: Apply multi-battery improvement factors
+
+Essential backup = Min(7.0 × (1 + 0.7 × 1), 7) = 7 days (capped)
+Appliance backup = 1.61 × (1 + 2.5 × 1) × 1.20 = 1.61 × 3.5 × 1.20 = 6.76 days
+Whole home backup = 0.30 × (1 + 3.33 × 1) × 1.20 = 0.30 × 4.33 × 1.20 = 1.56 days
+
+Final result: With 2 batteries, this system provides 7+ days for essential loads, 6.8 days for appliances, and 1.6 days for whole home backup.

@@ -1,0 +1,19 @@
+Specification	Microinverter	
+Input Voltage Range	16-60V DC	
+Output Voltage	240V AC	
+Peak Efficiency	97.5%	
+Night Power Consumption	
+Monitoring	Per Panel	
+Installation Location	Under Each Panel
+
+Individual panel optimization for maximum energy harvest
+No single point of failure - one microinverter fails, others keep working
+Better performance in partial shade conditions
+Panel-level monitoring for detailed performance tracking
+25 year 
+
+Microinverters if:
+Your roof has partial shading
+You want panel-level monitoring
+You value longer warranty coverage
+You plan to expand your system in the future
