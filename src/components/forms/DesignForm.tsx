@@ -540,11 +540,11 @@ export default function DesignForm({ onBack }: DesignFormProps) {
           onBack={() => setShowResults(false)}
         />
 
-        <p className="mt-12 text-gray-300 text-base md:text-lg text-center mb-8 md:mb-12 max-w-2xl">
+        {/* <p className="mt-12 text-gray-300 text-base md:text-lg text-center mb-8 md:mb-12 max-w-2xl">
           Choose your preferred plan
-        </p>
+        </p> */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-[1200px] place-items-stretch mb-20">
+        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-[1200px] place-items-stretch mb-20">
           <div
             className="relative flex flex-col justify-between h-auto min-h-[500px] bg-white backdrop-blur-sm 
                 rounded-2xl p-8 md:p-10 transition-all duration-500 cursor-pointer group 
@@ -917,7 +917,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </>
     );
   }

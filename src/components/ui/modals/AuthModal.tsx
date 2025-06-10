@@ -175,7 +175,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, initialAddress, 
     email: user.email,
     createdAt: new Date(),
   });
-  alert("User successfully added");
+  // alert("User successfully added");
 }catch(error){
     alert("error");
     console.log(error);
