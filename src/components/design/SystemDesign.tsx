@@ -117,10 +117,10 @@ interface StepComponentProps {
 const SystemDesign: React.FC<SystemDesignProps> = ({ userData }) => {
   console.log("userData");
 
-  const [currentStage, setCurrentStage] = useState<ProgressStage>("Batteries");
+  const [currentStage, setCurrentStage] = useState<ProgressStage>("Design");
   // Start with Panels already in completed stages
   const [completedStages, setCompletedStages] = useState<ProgressStage[]>([
-    "Batteries",
+    "Design",
   ]);
   // State for the image URL and map data
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -178,6 +178,7 @@ const SystemDesign: React.FC<SystemDesignProps> = ({ userData }) => {
     useState<any>(null);
   const [batteryCount, setBatteryCount] = useState<number>(0);
   const [isBatterySkipped, setIsBatterySkipped] = useState<boolean>(false);
+  const [showSkipPopup, setShowSkipPopup] = useState(false);
 
   // Add these states in SystemDesign.tsx where other states are defined
   const [manualPanelsOn, setManualPanelsOn] = useState<boolean>(false);
@@ -590,7 +591,7 @@ const SystemDesign: React.FC<SystemDesignProps> = ({ userData }) => {
 
   // Function to ensure progress state consistency
   const ensureProgressConsistency = () => {
-    const stages = ["Panels", "Inverter", "Batteries", "Design", "Overview"];
+    const stages = ["Panels", "Inverter", "Design", "Batteries", "Overview"];
     const currentIndex = stages.indexOf(currentStage);
 
     if (currentIndex === -1) {
@@ -1305,8 +1306,8 @@ const SystemDesign: React.FC<SystemDesignProps> = ({ userData }) => {
     const stages = [
       // "Panels",
       // "Inverter",
-      "Batteries",
       "Design",
+      "Batteries",
       "Overview",
     ] as const;
     type ExtendedStage = (typeof stages)[number]; // This creates a union type from the array
@@ -1767,15 +1768,10 @@ const SystemDesign: React.FC<SystemDesignProps> = ({ userData }) => {
                 color: "rgba(255, 255, 255, 1)",
               }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              onClick={() => {
-                setBatteryCount(0);
-                setIsBatterySkipped(true);
-                setSelectedBatteryDetails(null);
-                handleContinue(); // Continue to the next stage
-              }}
+              onClick={() => setShowSkipPopup(true)}
             >
               Don't need a battery?{" "}
-              <span className="underline ml-2 "> Skip</span>
+              <span className="underline ml-2"> Skip</span>
             </motion.button>
           </AnimatePresence>
         )}
@@ -1824,6 +1820,38 @@ const SystemDesign: React.FC<SystemDesignProps> = ({ userData }) => {
               </motion.button>
             </motion.div>
           </AnimatePresence>
+        )}
+        {/* POPUP outside the button */}
+        {showSkipPopup && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#1c1c1e] text-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+              <h2 className="text-lg font-semibold">Skip Battery?</h2>
+              <p className="text-sm text-white/70">
+                Without a battery, your solar system will not work during a
+                power outage.
+              </p>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowSkipPopup(false)}
+                  className="px-4 py-2 bg-white/10 rounded hover:bg-white/20 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setBatteryCount(0);
+                    setIsBatterySkipped(true);
+                    setSelectedBatteryDetails(null);
+                    handleContinue();
+                    setShowSkipPopup(false);
+                  }}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition"
+                >
+                  Yes, Skip
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
