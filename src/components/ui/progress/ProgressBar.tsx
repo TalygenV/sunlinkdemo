@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 // Define the stages for the progress bar
 // export type ProgressStage = 'Panels' | 'Inverter' | 'Batteries' | 'Design' | 'Overview' ;
-export type ProgressStage = "Batteries" | "Design" | "Overview";
+export type ProgressStage = "Design" | "Batteries" | "Overview";
 
 // Props interface for the ProgressBar component
 interface ProgressBarProps {
@@ -15,7 +15,7 @@ interface ProgressBarProps {
 
 // Define all stages in order
 // const stages: ProgressStage[] = ['Panels', 'Inverter', 'Batteries', 'Design', 'Overview'];
-const stages: ProgressStage[] = ["Batteries", "Design", "Overview"];
+const stages: ProgressStage[] = ["Design", "Batteries", "Overview"];
 
 const ProgressBar: React.FC<ProgressBarProps> = ({
   currentStage,
@@ -141,10 +141,10 @@ const getStageDescription = (stage: ProgressStage): string => {
     //   return "Select your solar panel type and configuration";
     // case "Inverter":
     //   return "Choose the right inverter for your system";
-    case "Batteries":
-      return "Add battery storage to your solar solution";
     case "Design":
       return "Customize the layout and placement of your system";
+    case "Batteries":
+      return "Add battery storage to your solar solution";
     case "Overview":
       return "Review your complete solar system configuration";
 

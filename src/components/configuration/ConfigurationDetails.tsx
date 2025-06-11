@@ -1,9 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Zap, BarChart3, ChevronRight, TrendingUp, Battery, CalendarClock, CheckCircle, ArrowRight, Plus, Minus } from 'lucide-react';
-import { itemVariants, cardVariants, segmentCardVariants, controlButtonVariants } from '../utils/animations';
-import { PanelControls, OffsetSelection, ManualPanelControls } from '../manual';
-import { BatterySelectionButtons } from '../ui/buttons';
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Sun,
+  Zap,
+  BarChart3,
+  ChevronRight,
+  TrendingUp,
+  Battery,
+  CalendarClock,
+  CheckCircle,
+  ArrowRight,
+  Plus,
+  Minus,
+} from "lucide-react";
+import {
+  itemVariants,
+  cardVariants,
+  segmentCardVariants,
+  controlButtonVariants,
+} from "../utils/animations";
+import { PanelControls, OffsetSelection, ManualPanelControls } from "../manual";
+import { BatterySelectionButtons } from "../ui/buttons";
 
 interface ConfigurationDetailsProps {
   stats: {
@@ -64,13 +81,13 @@ interface ConfigurationDetailsProps {
   annualUsage?: number; // Add annualUsage prop
   sortedPanelEfficiencies?: number[]; // Add sorted panel efficiencies prop
   isAutoPanelsSupported?: boolean; // Flag indicating if auto panels are supported
-  
+
   // Battery-related props
   batteryCount?: number;
   setBatteryCount?: (count: number) => void;
   isBatterySkipped?: boolean;
   navigateToBatteriesTab?: () => void;
-  
+
   // Manual panel props
   manualPanelsOn?: boolean;
   setManualPanelsOn?: (on: boolean) => void;
@@ -81,15 +98,15 @@ interface ConfigurationDetailsProps {
   onEnableDrawMode?: () => void;
   onRotationChange?: (rotation: number) => void;
   currentRotation?: number;
-  
+
   // Add the ref prop
   manualPanelWrapperRef?: React.RefObject<any>;
-  
+
   // Add these props:
   regions?: { id: number; panelCount: number }[];
   selectedRegionId?: number | null;
   onRegionSelect?: (regionId: number) => void;
-  
+
   // Flag indicating whether we are in mobile layout
   isMobile?: boolean;
 }
@@ -132,23 +149,26 @@ export const ConfigurationDetails = ({
   regions,
   selectedRegionId,
   onRegionSelect,
-  isMobile = false
+  isMobile = false,
 }: ConfigurationDetailsProps) => {
   const [activeCard, setActiveCard] = useState<number | null>(null);
   const [isPanelSectionExpanded, setIsPanelSectionExpanded] = useState(false);
-  const [isBatterySectionExpanded, setIsBatterySectionExpanded] = useState(true); // Start expanded
-  const [isManualPanelSectionExpanded, setIsManualPanelSectionExpanded] = useState(isAutoPanelsSupported ? false : true); // Start expanded
+  const [isBatterySectionExpanded, setIsBatterySectionExpanded] =
+    useState(true); // Start expanded
+  const [isManualPanelSectionExpanded, setIsManualPanelSectionExpanded] =
+    useState(isAutoPanelsSupported ? false : true); // Start expanded
   const [isOffsetSectionExpanded, setIsOffsetSectionExpanded] = useState(true); // Start collapsed
   const [annualUsage, setAnnualUsage] = useState(propAnnualUsage || 12000);
-  const [showBatterySelectionModal, setShowBatterySelectionModal] = useState(false);
-  
+  const [showBatterySelectionModal, setShowBatterySelectionModal] =
+    useState(false);
+
   // Update annualUsage state when prop changes
   useEffect(() => {
     if (propAnnualUsage) {
       setAnnualUsage(propAnnualUsage);
     }
   }, [propAnnualUsage]);
-  
+
   const [animatedStats, setAnimatedStats] = useState({
     panels: 0,
     energy: 0,
@@ -156,9 +176,9 @@ export const ConfigurationDetails = ({
     co2: 0,
     cost: 0,
     offset: 0,
-    size: 0
+    size: 0,
   });
-  
+
   const [animatingStats, setAnimatingStats] = useState({
     panels: false,
     energy: false,
@@ -166,26 +186,27 @@ export const ConfigurationDetails = ({
     co2: false,
     cost: false,
     offset: false,
-    size: false
+    size: false,
   });
-  
+
   // Reference to the panel section for scroll detection
   const panelSectionRef = useRef<HTMLDivElement>(null);
-  
+
   // Reference to the battery section for scroll detection
   const batterySectionRef = useRef<HTMLDivElement>(null);
-  
+
   // Function to check if element is in viewport
   const isElementInViewport = (el: HTMLElement) => {
     const rect = el.getBoundingClientRect();
     return (
       rect.top >= 0 &&
       rect.left >= 0 &&
-      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.bottom <=
+        (window.innerHeight || document.documentElement.clientHeight) &&
       rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     );
   };
-  
+
   // Battery count control functions
   const handleIncreaseBatteryCount = () => {
     if ((batteryCount === 0 || !batteryCount) && !selectedBattery) {
@@ -202,19 +223,19 @@ export const ConfigurationDetails = ({
       setBatteryCount(batteryCount - 1);
     }
   };
-  
+
   // Function to handle section toggling with animation timing
-  const handleSectionToggle = (section: 'offset' | 'battery' | 'manual') => {
+  const handleSectionToggle = (section: "offset" | "battery" | "manual") => {
     // Animation duration is 0.3s as defined in the motion.div transitions
     const animationDuration = isAutoPanelsSupported ? 300 : 0; // 300ms
-    
-    if (section === 'offset') {
+
+    if (section === "offset") {
       // If offset section is already expanded, just collapse it
       if (isOffsetSectionExpanded) {
         setIsOffsetSectionExpanded(false);
         return;
       }
-      
+
       // If battery section is expanded, collapse it first
       if (isBatterySectionExpanded) {
         isAutoPanelsSupported && setIsBatterySectionExpanded(false);
@@ -226,13 +247,13 @@ export const ConfigurationDetails = ({
         // If battery section is already collapsed, just expand offset section
         setIsOffsetSectionExpanded(true);
       }
-    } else if (section === 'battery') {
+    } else if (section === "battery") {
       // If battery section is already expanded, just collapse it
       isAutoPanelsSupported && setIsManualPanelSectionExpanded(false);
       setTimeout(() => {
         setIsBatterySectionExpanded(!isBatterySectionExpanded);
       }, animationDuration);
-    } else if (section === 'manual') {
+    } else if (section === "manual") {
       // Toggle manual panel section
       isAutoPanelsSupported && setIsBatterySectionExpanded(false);
       setTimeout(() => {
@@ -244,31 +265,40 @@ export const ConfigurationDetails = ({
   // Add scroll listener to auto-expand panel and battery sections when scrolled to
   useEffect(() => {
     const handleScroll = () => {
-      if (panelSectionRef.current && isElementInViewport(panelSectionRef.current)) {
+      if (
+        panelSectionRef.current &&
+        isElementInViewport(panelSectionRef.current)
+      ) {
         setIsPanelSectionExpanded(true);
       }
-      if (batterySectionRef.current && isElementInViewport(batterySectionRef.current)) {
+      if (
+        batterySectionRef.current &&
+        isElementInViewport(batterySectionRef.current)
+      ) {
         // Only auto-expand battery section if offset section is not expanded
         if (!isOffsetSectionExpanded) {
           setIsBatterySectionExpanded(true);
         }
       }
     };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [isOffsetSectionExpanded]);
-  
+
   // Helper function to calculate system scaling factor
-  const calculateSystemFactor = (systemEnergy: number, systemOffset: number) => {
+  const calculateSystemFactor = (
+    systemEnergy: number,
+    systemOffset: number
+  ) => {
     // Reference system: 13,780kWh at 115% offset
     const refEnergy = 13780;
     const refOffset = 115;
-    
+
     // Calculate scaling based on ratio to reference system
     const energyRatio = systemEnergy / refEnergy;
     const offsetRatio = systemOffset / refOffset;
-    
+
     // Combine factors with square root for diminishing returns
     return Math.sqrt(energyRatio * offsetRatio);
   };
@@ -282,12 +312,12 @@ export const ConfigurationDetails = ({
     systemOffset: number
   ): [number, number, number] => {
     const systemFactor = calculateSystemFactor(systemEnergy, systemOffset);
-    
+
     // Initialize with default values
     let essentialDays = 0;
     let applianceDays = 0;
     let wholeHomeDays = 0;
-    
+
     // Battery-specific lookup tables
     const batteryConfig = {
       enphase: {
@@ -336,174 +366,185 @@ export const ConfigurationDetails = ({
         },
       },
     };
-    
+
     // Get the proper configuration based on battery type (case insensitive)
-    const config =
-      batteryType.toLowerCase().includes("enphase") ? batteryConfig.enphase :
-      batteryType.toLowerCase().includes("tesla") ? batteryConfig.tesla :
-      batteryType.toLowerCase().includes("franklin") ? batteryConfig.franklin : null;
-      
+    const config = batteryType.toLowerCase().includes("enphase")
+      ? batteryConfig.enphase
+      : batteryType.toLowerCase().includes("tesla")
+      ? batteryConfig.tesla
+      : batteryType.toLowerCase().includes("franklin")
+      ? batteryConfig.franklin
+      : null;
+
     if (config) {
       // Calculate essential days based on configuration
-      essentialDays = count === 1 ? config.essential.single : config.essential.multi;
-      
+      essentialDays =
+        count === 1 ? config.essential.single : config.essential.multi;
+
       // Calculate appliance days
       if (count < config.appliance.values.length) {
         applianceDays = config.appliance.values[count];
       } else {
         // Extrapolate for battery counts beyond our lookup table
-        applianceDays = config.appliance.values[5] +
-          ((count - 5) * config.appliance.extrapolationRate);
+        applianceDays =
+          config.appliance.values[5] +
+          (count - 5) * config.appliance.extrapolationRate;
       }
-      
+
       // Cap appliance days at 7 if needed
       applianceDays = Math.min(applianceDays, 7);
-      
+
       // Calculate whole home days
       if (count < config.wholeHome.values.length) {
         wholeHomeDays = config.wholeHome.values[count];
       } else {
         // Extrapolate for battery counts beyond our lookup table
-        wholeHomeDays = config.wholeHome.values[5] +
-          ((count - 5) * config.wholeHome.extrapolationRate);
+        wholeHomeDays =
+          config.wholeHome.values[5] +
+          (count - 5) * config.wholeHome.extrapolationRate;
       }
-      
+
       // Apply system scaling factor
       if (essentialDays < 7) {
         essentialDays *= systemFactor;
       }
-      
+
       if (applianceDays < 7) {
         applianceDays *= systemFactor;
       }
-      
+
       wholeHomeDays *= systemFactor;
     } else {
       // Generic calculation for unknown battery types
       // Calculate load categories based on daily consumption
       const dailyConsumption = systemEnergy / 365;
-      const essentialLoad = dailyConsumption * 0.08;  // 8%
-      const applianceLoad = dailyConsumption * 0.35;  // 35%
-      const wholeHomeLoad = dailyConsumption * 1.88;  // 188%
-      
+      const essentialLoad = dailyConsumption * 0.08; // 8%
+      const applianceLoad = dailyConsumption * 0.35; // 35%
+      const wholeHomeLoad = dailyConsumption * 1.88; // 188%
+
       // Calculate single-battery backup time
       const essentialBackup = capacity / essentialLoad;
       const applianceBackup = capacity / applianceLoad;
       const wholeHomeBackup = capacity / wholeHomeLoad;
-      
+
       // Apply multi-battery improvement factors
       essentialDays = Math.min(
         essentialBackup * (1 + 0.7 * (count - 1)) * systemFactor,
         7
       );
-      
+
       applianceDays = Math.min(
         applianceBackup * (1 + 2.5 * (count - 1)) * systemFactor,
         7
       );
-      
+
       wholeHomeDays = wholeHomeBackup * (1 + 3.33 * (count - 1)) * systemFactor;
     }
-    
+
     return [essentialDays, applianceDays, wholeHomeDays];
   };
 
   // Calculate backup durations using battery-specific formulas
   const calculateBackupDurations = () => {
     // Log the battery information for debugging
-  
-    
+
     if (!selectedBattery || batteryCount === 0) {
       return {
         essential: { days: 0, hours: 0 },
         appliance: { days: 0, hours: 0 },
-        wholeHome: { days: 0, hours: 0 }
+        wholeHome: { days: 0, hours: 0 },
       };
     }
-  
+
     // Get battery properties
     const batteryType = selectedBattery?.shortName || "";
     let batteryCapacity = 13.5; // Default to 13.5 kWh
-    
-    if (typeof selectedBattery === 'object' && selectedBattery !== null) {
+
+    if (typeof selectedBattery === "object" && selectedBattery !== null) {
       if (selectedBattery.capacity) {
         batteryCapacity = selectedBattery.capacity;
       }
     }
-    
+
     // Step 1: Calculate daily consumption
     const dailyConsumption = annualUsage / 365;
-   
-    
+
     // Get system stats for scaling
-    const systemEnergy = animatedStats.energy || 0; 
-    const systemOffset = animatedStats.offset || 0; 
-    
+    const systemEnergy = animatedStats.energy || 0;
+    const systemOffset = animatedStats.offset || 0;
+
     // Use the unified function for all battery types
     const [essentialBackupDays, applianceBackupDays, wholeHomeBackupDays] =
-      calculateBatteryBackup(batteryType, batteryCapacity, batteryCount, systemEnergy, systemOffset);
-    
+      calculateBatteryBackup(
+        batteryType,
+        batteryCapacity,
+        batteryCount,
+        systemEnergy,
+        systemOffset
+      );
+
     // No need to cap here as it's already handled in the calculateBatteryBackup function
-    
-   
-    
+
     // Convert days to days and hours
     return {
       essential: {
         days: Math.floor(essentialBackupDays),
-        hours: Math.floor((essentialBackupDays % 1) * 24)
+        hours: Math.floor((essentialBackupDays % 1) * 24),
       },
       appliance: {
         days: Math.floor(applianceBackupDays),
-        hours: Math.floor((applianceBackupDays % 1) * 24)
+        hours: Math.floor((applianceBackupDays % 1) * 24),
       },
       wholeHome: {
         days: Math.floor(wholeHomeBackupDays),
-        hours: Math.floor((wholeHomeBackupDays % 1) * 24)
-      }
+        hours: Math.floor((wholeHomeBackupDays % 1) * 24),
+      },
     };
   };
 
   // Format duration display
-  const formatDuration = (duration: { days: number, hours: number }) => {
+  const formatDuration = (duration: { days: number; hours: number }) => {
     if (duration.days === 0 && duration.hours === 0) return "N/A";
-    
+
     // Special case for 7+ days
     if (duration.days >= 7) {
       return "7+ days";
     }
-    
+
     let result = "";
     if (duration.days > 0) {
-      result += `${duration.days} day${duration.days !== 1 ? 's' : ''} `;
+      result += `${duration.days} day${duration.days !== 1 ? "s" : ""} `;
     }
     if (duration.hours > 0 || duration.days === 0) {
-      result += `${duration.hours} hour${duration.hours !== 1 ? 's' : ''}`;
+      result += `${duration.hours} hour${duration.hours !== 1 ? "s" : ""}`;
     }
     return result.trim();
   };
-  
+
   // Calculate backup durations
   const backupDurations = calculateBackupDurations();
-  
+
   // Calculate combined stats for display
   // If there are no panels at all, energy should be 0
-  const combinedEnergyDcKwh = (totalManualPanels === 0)
-    ? 0
-    : totalManualPanels * 550;
+  const combinedEnergyDcKwh =
+    totalManualPanels === 0 ? 0 : totalManualPanels * 550;
   const combinedPanelCount = stats.totalPanels + totalManualPanels;
 
   // Calculate combined offset - if no panels, offset should be 0
-  const combinedOffset = combinedPanelCount === 0
-    ? 0
-    : Math.max(0, ((combinedEnergyDcKwh - annualUsage) / annualUsage + 1) * 100);
-  
+  const combinedOffset =
+    combinedPanelCount === 0
+      ? 0
+      : Math.max(
+          0,
+          ((combinedEnergyDcKwh - annualUsage) / annualUsage + 1) * 100
+        );
+
   // Animate stats when they change
   useEffect(() => {
     // Use a single animation duration for all stats
     const animationDuration = 1500; // 1.5 seconds animation for everything
     const animationStartTime = Date.now();
-    
+
     // Mark all stats as animating at the start
     setAnimatingStats({
       panels: true,
@@ -512,9 +553,9 @@ export const ConfigurationDetails = ({
       co2: true,
       cost: true,
       offset: true,
-      size: true
+      size: true,
     });
-    
+
     // Get start values from current animated stats
     const panelStart = animatedStats.panels;
     const energyStart = animatedStats.energy;
@@ -523,12 +564,12 @@ export const ConfigurationDetails = ({
     const sizeStart = animatedStats.size;
     const costStart = animatedStats.cost;
     const offsetStart = animatedStats.offset;
-    
+
     // Calculate new target values
     const sizeInKW = (combinedPanelCount * 400) / 1000;
-    const costValue = sizeInKW * 2.50 * 1000; // Converting to dollars
-    const offsetValue = combinedOffset
-    
+    const costValue = sizeInKW * 2.5 * 1000; // Converting to dollars
+    const offsetValue = combinedOffset;
+
     // Calculate differences between current and target values
     const panelDiff = combinedPanelCount - panelStart;
     const energyDiff = Math.round(combinedEnergyDcKwh) - energyStart;
@@ -537,16 +578,16 @@ export const ConfigurationDetails = ({
     const sizeDiff = sizeInKW - sizeStart;
     const costDiff = costValue - costStart;
     const offsetDiff = offsetValue - offsetStart;
-    
+
     const animate = () => {
       const now = Date.now();
       const elapsed = now - animationStartTime;
       const progress = Math.min(elapsed / animationDuration, 1);
-      
+
       // Ease-out function for smoother animation
       const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
       const easedProgress = easeOut(progress);
-      
+
       // Update all animated values with the same progress
       setAnimatedStats({
         panels: Math.round(panelStart + panelDiff * easedProgress),
@@ -555,9 +596,9 @@ export const ConfigurationDetails = ({
         co2: Math.round(co2Start + co2Diff * easedProgress),
         cost: Math.round(costStart + costDiff * easedProgress),
         offset: Math.round(offsetStart + offsetDiff * easedProgress),
-        size: Number((sizeStart + sizeDiff * easedProgress).toFixed(1))
+        size: Number((sizeStart + sizeDiff * easedProgress).toFixed(1)),
       });
-      
+
       // Continue animation until complete
       if (progress < 1) {
         requestAnimationFrame(animate);
@@ -570,31 +611,38 @@ export const ConfigurationDetails = ({
           co2: false,
           cost: false,
           offset: false,
-          size: false
+          size: false,
         });
       }
     };
-    
+
     requestAnimationFrame(animate);
-  }, [stats.totalPanels, stats.totalEnergyDcKwh, annualUsage, totalManualPanels]);
-  
+  }, [
+    stats.totalPanels,
+    stats.totalEnergyDcKwh,
+    annualUsage,
+    totalManualPanels,
+  ]);
+
   // Helper function to get tier label based on panel count
   const getSystemTier = () => {
     if (stats.totalPanels >= 20) return "Premium";
     if (stats.totalPanels >= 10) return "Standard";
     return "Basic";
   };
-  
+
   // Toggle manual panels mode
   const handleToggleManualPanels = () => {
     setManualPanelsOn(!manualPanelsOn);
   };
-  
+
   return (
     <motion.div
       variants={itemVariants}
       className={`rounded-3xl overflow-visible  top-4 transition-all duration-500 relative ${
-        obstructionMode ? 'opacity-0 translate-x-20' : 'opacity-100 translate-x-0'
+        obstructionMode
+          ? "opacity-0 translate-x-20"
+          : "opacity-100 translate-x-0"
       }`}
     >
       {/* Battery Selection Modal */}
@@ -614,7 +662,9 @@ export const ConfigurationDetails = ({
               exit={{ scale: 0.9, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
             >
-              <h3 className="text-xl font-light text-white mb-8 text-center">Battery Required</h3>
+              <h3 className="text-xl font-light text-white mb-8 text-center">
+                Battery Required
+              </h3>
               <p className="text-gray-300 mb-8 text-center">
                 A battery must be selected to modify the quantity.
               </p>
@@ -624,13 +674,13 @@ export const ConfigurationDetails = ({
                     className="absolute -inset-1 rounded-full z-0"
                     animate={{
                       opacity: [0.4, 0.6, 0.4],
-                      scale: [1, 1.03, 1]
+                      scale: [1, 1.03, 1],
                     }}
                     transition={{
                       duration: 6,
                       repeat: Infinity,
                       ease: "easeInOut",
-                      times: [0, 0.5, 1]
+                      times: [0, 0.5, 1],
                     }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-white/30 to-blue-500/20 rounded-full blur-[20px]" />
@@ -667,18 +717,24 @@ export const ConfigurationDetails = ({
       {/* Main content container with backdrop blur */}
       <div className="relative z-10 bg-black/10  rounded-3xl border border-white/10">
         {/* Header */}
-       
+
         <div className="">
           <div className="px-5 py-0">
-            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'} gap-0 overflow-hidden rounded-xl`}>
+            <div
+              className={`grid ${
+                isMobile ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"
+              } gap-0 overflow-hidden rounded-xl`}
+            >
               <motion.div
                 variants={cardVariants}
                 whileTap="tap"
                 className="relative overflow-hidden group border-r border-white/10 border-b"
               >
                 <div className="flex flex-col h-full justify-between relative z-10 p-4">
-                  <div className="text-xs text-gray-500 text-center uppercase tracking-widest pb-2">Annual Usage</div>
-                  
+                  <div className="text-xs text-gray-500 text-center uppercase tracking-widest pb-2">
+                    Annual Usage
+                  </div>
+
                   <motion.div
                     key={`annual-usage-stat`}
                     initial={{ opacity: 0.5, y: 0 }}
@@ -686,152 +742,195 @@ export const ConfigurationDetails = ({
                     transition={{ duration: 0.3 }}
                     className="text-3xl font-light text-white tabular-nums flex items-end self-center pb-2 pt-2 "
                   >
-                    <motion.span 
+                    <motion.span
                       className="text-white"
                       whileHover={{ scale: 1.1 }}
                     >
                       {Math.round(annualUsage).toLocaleString()}
                     </motion.span>
-                    <span className="text-xs text-gray-500  tracking-widest ml-1 mb-1">kWh</span>
+                    <span className="text-xs text-gray-500  tracking-widest ml-1 mb-1">
+                      kWh
+                    </span>
                   </motion.div>
                 </div>
-                
+
                 {/* Subtle animated border effect */}
                 <motion.div
                   className="absolute inset-0 pointer-events-none"
                   animate={{
-                    boxShadow: ['0 0 0px rgba(168, 85, 247, 0)', '0 0 15px rgba(168, 85, 247, 0.3)', '0 0 0px rgba(168, 85, 247, 0)']
+                    boxShadow: [
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                      "0 0 15px rgba(168, 85, 247, 0.3)",
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                    ],
                   }}
-                  transition={{ duration: 3, repeat: Infinity, repeatType: "loop" }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                  }}
                 />
               </motion.div>
-              
+
               <motion.div
                 variants={cardVariants}
                 whileTap="tap"
                 className="relative overflow-hidden group border-b border-white/10"
               >
                 <div className="flex flex-col h-full justify-between relative z-10 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-widest pb-2 text-center">Annual Output</div>
-                  
+                  <div className="text-xs text-gray-500 uppercase tracking-widest pb-2 text-center">
+                    Annual Output
+                  </div>
+
                   <motion.div
                     initial={{ opacity: 0.5, y: 0 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="text-3xl font-light text-white tabular-nums truncate flex items-end self-center px-4 pb-2 pt-2"
                   >
-                    <motion.span 
+                    <motion.span
                       className="text-white"
                       whileHover={{ scale: 1.1 }}
                       animate={{ opacity: animatingStats.energy ? 0.5 : 1 }}
-                     
                     >
                       {Math.round(combinedEnergyDcKwh).toLocaleString()}
                     </motion.span>
-                    <span className="text-xs text-gray-500 tracking-widest ml-1 mb-1">kWh</span>
+                    <span className="text-xs text-gray-500 tracking-widest ml-1 mb-1">
+                      kWh
+                    </span>
                   </motion.div>
                 </div>
-                
+
                 {/* Subtle animated border effect */}
                 <motion.div
                   className="absolute inset-0 pointer-events-none"
                   animate={{
-                    boxShadow: ['0 0 0px rgba(168, 85, 247, 0)', '0 0 15px rgba(168, 85, 247, 0.3)', '0 0 0px rgba(168, 85, 247, 0)']
+                    boxShadow: [
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                      "0 0 15px rgba(168, 85, 247, 0.3)",
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                    ],
                   }}
-                  transition={{ duration: 3, repeat: Infinity, repeatType: "loop" }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                  }}
                 />
               </motion.div>
-              
+
               <motion.div
                 variants={cardVariants}
                 whileTap="tap"
                 className="relative overflow-hidden group border-r border-white/10"
               >
                 <div className="flex flex-col h-full justify-between relative z-10 p-4">
-                    <div className="text-xs text-gray-500 uppercase tracking-widest pb-2 text-center">System Size</div>
-                  
+                  <div className="text-xs text-gray-500 uppercase tracking-widest pb-2 text-center">
+                    System Size
+                  </div>
+
                   <motion.div
                     initial={{ opacity: 0.5, y: 0 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="text-3xl font-light text-white tabular-nums flex items-end self-center pb-2 pt-2"
                   >
-                    <motion.span 
+                    <motion.span
                       className="text-white"
                       whileHover={{ scale: 1.1 }}
                       animate={{ opacity: animatingStats.size ? 0.5 : 1 }}
-                    
                     >
                       {((combinedPanelCount * 400) / 1000).toFixed(1)}
                     </motion.span>
-                    <span className="text-xs text-gray-500  tracking-widest ml-1 mb-1">kW</span>
+                    <span className="text-xs text-gray-500  tracking-widest ml-1 mb-1">
+                      kW
+                    </span>
                   </motion.div>
                 </div>
-                
+
                 {/* Subtle animated border effect */}
                 <motion.div
                   className="absolute inset-0 pointer-events-none"
                   animate={{
-                    boxShadow: ['0 0 0px rgba(168, 85, 247, 0)', '0 0 15px rgba(168, 85, 247, 0.3)', '0 0 0px rgba(168, 85, 247, 0)']
+                    boxShadow: [
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                      "0 0 15px rgba(168, 85, 247, 0.3)",
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                    ],
                   }}
-                  transition={{ duration: 3, repeat: Infinity, repeatType: "loop" }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                  }}
                 />
               </motion.div>
-              
+
               <motion.div
                 variants={cardVariants}
                 whileTap="tap"
                 className="relative overflow-hidden group "
               >
                 <div className="flex flex-col h-full justify-between relative z-10 p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-widest pb-2 text-center">Offset</div>
-                  
+                  <div className="text-xs text-gray-500 uppercase tracking-widest pb-2 text-center">
+                    Offset
+                  </div>
+
                   <motion.div
                     initial={{ opacity: 0.5, y: 0 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="text-3xl font-light text-white tabular-nums flex items-end self-center pb-2 pt-2"
                   >
-                    <motion.span 
+                    <motion.span
                       className="text-white"
                       whileHover={{ scale: 1.1 }}
                       animate={{ opacity: animatingStats.offset ? 0.5 : 1 }}
-                     
                     >
                       {animatedStats.offset}
                     </motion.span>
-                    <span className="text-xs text-gray-500 uppercase tracking-widest ml-1 mb-1">%</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-widest ml-1 mb-1">
+                      %
+                    </span>
                   </motion.div>
                 </div>
-                
+
                 {/* Subtle animated border effect */}
                 <motion.div
                   className="absolute inset-0 pointer-events-none"
                   animate={{
-                    boxShadow: ['0 0 0px rgba(168, 85, 247, 0)', '0 0 15px rgba(168, 85, 247, 0.3)', '0 0 0px rgba(168, 85, 247, 0)']
+                    boxShadow: [
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                      "0 0 15px rgba(168, 85, 247, 0.3)",
+                      "0 0 0px rgba(168, 85, 247, 0)",
+                    ],
                   }}
-                  transition={{ duration: 3, repeat: Infinity, repeatType: "loop" }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                  }}
                 />
               </motion.div>
             </div>
           </div>
-          
+
           {/* Manual Panel Controls Section - always shown as a dropdown */}
           <div className="relative rounded-t-3xl shadow-lg">
-           {/* Only show panel controls if auto panels are supported */}
-           {isAutoPanelsSupported && (
-             <PanelControls
-               activePanels={stats.totalPanels + totalManualPanels}
-               totalPanels={totalPanels + totalManualPanels}
-               onDecreasePanels={onDecreasePanels}
-               onIncreasePanels={onIncreasePanels}
-             />
-           )}
-       </div>
+            {/* Only show panel controls if auto panels are supported */}
+            {isAutoPanelsSupported && (
+              <PanelControls
+                activePanels={stats.totalPanels + totalManualPanels}
+                totalPanels={totalPanels + totalManualPanels}
+                onDecreasePanels={onDecreasePanels}
+                onIncreasePanels={onIncreasePanels}
+              />
+            )}
+          </div>
           <div className="px-5 pt-3 ">
             {/* Manual Panel Controls have been moved to NearmapTestingTwoManual.tsx as an overlay above the map. */}
           </div>
-          
+
           {/* Battery Storage Section - always shown just like manual panels section */}
           <div className="px-5 pt-4">
             <motion.div
@@ -840,14 +939,14 @@ export const ConfigurationDetails = ({
             >
               <div
                 className="flex items-center cursor-pointer p-4 relative"
-                onClick={() => handleSectionToggle('battery')}
+                onClick={() => handleSectionToggle("battery")}
               >
                 <h3 className="text-white text-sm font-medium w-full text-center">
                   {selectedBattery
                     ? selectedBattery.name
                     : batteryCount === 0
-                      ? "No Battery Selected"
-                      : "Battery Required"}
+                    ? "No Battery Selected"
+                    : "Battery Required"}
                 </h3>
                 <motion.div
                   animate={{ rotate: isBatterySectionExpanded ? 90 : 0 }}
@@ -857,7 +956,7 @@ export const ConfigurationDetails = ({
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </motion.div>
               </div>
-              
+
               <AnimatePresence>
                 {isBatterySectionExpanded && (
                   <motion.div
@@ -880,14 +979,14 @@ export const ConfigurationDetails = ({
                             onClick={handleDecreaseBatteryCount}
                             className={`relative w-9 h-9 flex items-center justify-center rounded-full ${
                               batteryCount === 0
-                                ? 'bg-white/5 text-gray-500 cursor-not-allowed'
-                                : 'text-white border border-white/20'
+                                ? "bg-white/5 text-gray-500 cursor-not-allowed"
+                                : "text-white border border-white/20"
                             } transition-colors`}
                             disabled={batteryCount === 0}
                           >
                             <Minus className="w-4 h-4" />
                           </motion.button>
-                          
+
                           {/* Battery count display */}
                           <div className="relative text-center min-w-[60px] group">
                             <div className="flex flex-col">
@@ -897,13 +996,17 @@ export const ConfigurationDetails = ({
                                 animate={{ opacity: 1, y: 0 }}
                                 className="text-base font-light tracking-wide"
                               >
-                                <span className="text-white text-2xl font-lg">{batteryCount}</span>
+                                <span className="text-white text-2xl font-lg">
+                                  {batteryCount}
+                                </span>
                               </motion.div>
-                              
-                              <div className="text-[10px] text-gray-500 uppercase tracking-widest">{batteryCount === 1 ? 'Battery' : 'Batteries'}</div>
+
+                              <div className="text-[10px] text-gray-500 uppercase tracking-widest">
+                                {batteryCount === 1 ? "Battery" : "Batteries"}
+                              </div>
                             </div>
                           </div>
-                          
+
                           {/* Increase button */}
                           <motion.button
                             variants={controlButtonVariants}
@@ -917,38 +1020,40 @@ export const ConfigurationDetails = ({
                               className="absolute -inset-1 rounded-full z-0"
                               animate={{
                                 opacity: [0.4, 0.6, 0.4],
-                                scale: [1, 1.03, 1]
+                                scale: [1, 1.03, 1],
                               }}
                               transition={{
                                 duration: 6,
                                 repeat: Infinity,
                                 ease: "easeInOut",
-                                times: [0, 0.5, 1]
+                                times: [0, 0.5, 1],
                               }}
                             >
                               <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-white/30 to-blue-500/20 rounded-full blur-[15px]" />
                             </motion.div>
 
                             {/* Button Core */}
-                            <div
-                              className="btn-sheen relative z-10 flex items-center justify-center w-full h-full rounded-full shadow-xl transition-all duration-500 border border-white/10 text-white"
-                            >
+                            <div className="btn-sheen relative z-10 flex items-center justify-center w-full h-full rounded-full shadow-xl transition-all duration-500 border border-white/10 text-white">
                               <Plus className="w-4 h-4" />
                             </div>
                           </motion.button>
                         </motion.div>
                       </div>
-                      
+
                       {/* Backup Durations */}
                       <div className="p-3 rounded-lg ">
-                        <h4 className="text-white/90 text-sm w-full text-center mb-3">Backup Duration</h4>
-                        
+                        <h4 className="text-white/90 text-sm w-full text-center mb-3">
+                          Backup Duration
+                        </h4>
+
                         <div className="text-sm">
                           <div className="flex justify-between mb-1 pb-1 border-b border-white/5">
                             <div className="flex items-center gap-1 group relative">
                               <span className="text-gray-300">Essentials</span>
                               <div className="relative w-4 h-4 flex items-center justify-center cursor-help">
-                                <div className="w-3 h-3 rounded-full border border-white/30 flex items-center justify-center text-[8px] text-white/70">i</div>
+                                <div className="w-3 h-3 rounded-full border border-white/30 flex items-center justify-center text-[8px] text-white/70">
+                                  i
+                                </div>
                                 <div className="absolute bottom-full -left-3 mb-1 w-[220px] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
                                   <div className="relative">
                                     <div className="absolute -inset-1 rounded-md opacity-70"></div>
@@ -959,14 +1064,18 @@ export const ConfigurationDetails = ({
                                 </div>
                               </div>
                             </div>
-                            <span className="text-white">{formatDuration(backupDurations.essential)}</span>
+                            <span className="text-white">
+                              {formatDuration(backupDurations.essential)}
+                            </span>
                           </div>
-                          
+
                           <div className="flex justify-between mb-1 pb-1 border-b border-white/5">
                             <div className="flex items-center gap-1 group relative">
                               <span className="text-gray-300">Appliances</span>
                               <div className="relative w-4 h-4 flex items-center justify-center cursor-help">
-                                <div className="w-3 h-3 rounded-full border border-white/30 flex items-center justify-center text-[8px] text-white/70">i</div>
+                                <div className="w-3 h-3 rounded-full border border-white/30 flex items-center justify-center text-[8px] text-white/70">
+                                  i
+                                </div>
                                 <div className="absolute bottom-full -left-3 mb-1 w-[200px] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
                                   <div className="relative">
                                     <div className="absolute -inset-1 rounded-md opacity-70"></div>
@@ -977,25 +1086,31 @@ export const ConfigurationDetails = ({
                                 </div>
                               </div>
                             </div>
-                            <span className="text-white">{formatDuration(backupDurations.appliance)}</span>
+                            <span className="text-white">
+                              {formatDuration(backupDurations.appliance)}
+                            </span>
                           </div>
-                          
+
                           <div className="flex justify-between">
                             <div className="flex items-center gap-1 group relative">
                               <span className="text-gray-300">Whole Home</span>
                               <div className="relative w-4 h-4 flex items-center justify-center cursor-help">
-                                <div className="w-3 h-3 rounded-full border border-white/30 flex items-center justify-center text-[8px] text-white/70">i</div>
+                                <div className="w-3 h-3 rounded-full border border-white/30 flex items-center justify-center text-[8px] text-white/70">
+                                  i
+                                </div>
                                 <div className="absolute bottom-full -left-3 mb-1 w-[200px] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
                                   <div className="relative">
                                     <div className="absolute -inset-1 rounded-md opacity-70"></div>
                                     <div className="bg-black/80 backdrop-blur-sm text-[12px] p-2 rounded-md border border-white/10 text-white/90 relative z-10 text-center">
-                                      Major appliances and essentials 
+                                      Major appliances and essentials
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <span className="text-white">{formatDuration(backupDurations.wholeHome)}</span>
+                            <span className="text-white">
+                              {formatDuration(backupDurations.wholeHome)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1005,7 +1120,7 @@ export const ConfigurationDetails = ({
               </AnimatePresence>
             </motion.div>
           </div>
-          
+
           {/* Add Finalize Design button here */}
           <div className="px-[20%]  py-4 pb-6 mt-2">
             <div className="relative">
@@ -1013,13 +1128,13 @@ export const ConfigurationDetails = ({
                 className="absolute -inset-1 rounded-full z-0"
                 animate={{
                   opacity: [0.4, 0.6, 0.4],
-                  scale: [1, 1.03, 1]
+                  scale: [1, 1.03, 1],
                 }}
                 transition={{
                   duration: 6,
                   repeat: Infinity,
                   ease: "easeInOut",
-                  times: [0, 0.5, 1]
+                  times: [0, 0.5, 1],
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-white/30 to-blue-500/20 rounded-full blur-[20px]" />
@@ -1036,14 +1151,12 @@ export const ConfigurationDetails = ({
             </div>
           </div>
         </div>
-        
+
         {/* Stats Cards */}
-        
+
         {/* Panel Selection Section */}
-  
 
         {/* Segment Details */}
-    
       </div>
     </motion.div>
   );
