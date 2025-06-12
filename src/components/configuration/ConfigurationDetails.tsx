@@ -529,6 +529,9 @@ export const ConfigurationDetails = ({
   const combinedEnergyDcKwh =
     totalManualPanels === 0 ? 0 : totalManualPanels * 550;
   const combinedPanelCount = stats.totalPanels + totalManualPanels;
+  const systemSizeKW = combinedPanelCount
+    ? ((combinedPanelCount * 400) / 1000).toFixed(1)
+    : null;
 
   // Calculate combined offset - if no panels, offset should be 0
   const combinedOffset =
@@ -840,7 +843,7 @@ export const ConfigurationDetails = ({
                       whileHover={{ scale: 1.1 }}
                       animate={{ opacity: animatingStats.size ? 0.5 : 1 }}
                     >
-                      {((combinedPanelCount * 400) / 1000).toFixed(1)}
+                      {systemSizeKW ?? "--"}
                     </motion.span>
                     <span className="text-xs text-gray-500  tracking-widest ml-1 mb-1">
                       kW
@@ -1139,15 +1142,17 @@ export const ConfigurationDetails = ({
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-white/30 to-blue-500/20 rounded-full blur-[20px]" />
               </motion.div>
-              <motion.button
-                onClick={onFinalizeDesign}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="btn-sheen relative z-10 w-full h-[52px] flex items-center rounded-full justify-center gap-3 px-8 text-white shadow-xl transition-all duration-500 border border-white/10 text-sm font-medium tracking-wider group"
-              >
-                Finalize Design
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-              </motion.button>
+              {parseFloat(systemSizeKW ?? "0") > 0 && (
+                <motion.button
+                  onClick={onFinalizeDesign}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="btn-sheen relative z-10 w-full h-[52px] flex items-center rounded-full justify-center gap-3 px-8 text-white shadow-xl transition-all duration-500 border border-white/10 text-sm font-medium tracking-wider group"
+                >
+                  Finalize Design
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </motion.button>
+              )}
             </div>
           </div>
         </div>
