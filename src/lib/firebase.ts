@@ -23,7 +23,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
 };
-console.log("Firebase config:", firebaseConfig);
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
