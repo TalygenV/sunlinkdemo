@@ -117,6 +117,24 @@ export default function DesignForm({ onBack }: DesignFormProps) {
     };
     parentTerritoryId?: number;
   };
+  interface RateBand {
+    rateAmount: number;
+    // You can add more fields here as needed
+  }
+
+  interface Rate {
+    rateGroupName: string;
+    chargeType: string;
+    chargeClass: string;
+    rateBands: RateBand[];
+  }
+
+  interface Tariff {
+    tariffId: number;
+    tariffName: string;
+    tariffType: string;
+    rates?: Rate[];
+  }
 
   const addressInputRef = useRef<HTMLInputElement>(null);
   const [territories, setTerritories] = useState<Territory[]>([]);
@@ -172,62 +190,144 @@ export default function DesignForm({ onBack }: DesignFormProps) {
 
       // Fetch tariff data with pagination, targeting active tariffs
       let validTariff = null;
+      // let page = 1;
+      // const pageSize = 25;
+      // const today = new Date().toISOString().split("T")[0]; // Current date for effectiveOn
+
+      // while (!validTariff) {
+      //   const tariffRes = await fetch(
+      //     `https://api.genability.com/rest/public/tariffs?lseId=${lseId}&customerClasses=RESIDENTIAL&tariffType=DEFAULT&sortOn=tariffType&populateRates=true&effectiveOn=${today}&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}&start=${
+      //       (page - 1) * pageSize + 1
+      //     }&pageCount=${pageSize}`
+      //   );
+      //   if (!tariffRes.ok) {
+      //     throw new Error(
+      //       `Tariff API error: ${tariffRes.status} ${tariffRes.statusText}`
+      //     );
+      //   }
+
+      //   const tariffData = await tariffRes.json();
+      //   console.log("Tariff data:", tariffData);
+      //   console.log(
+      //     "Tariff results:",
+      //     JSON.stringify(tariffData.results, null, 2)
+      //   );
+
+      //   if (!tariffData.results || tariffData.results.length === 0) {
+      //     setShowNoTariffModal(true);
+      //     return null; // prevent navigation
+      //   }
+
+      //   validTariff = tariffData.results.find(
+      //     (tariff: Tariff) => tariff.rateBands && tariff.rateBands.length > 0
+      //   );
+
+      //   if (!validTariff && tariffData.count > page * pageSize) {
+      //     page++;
+      //   } else if (validTariff) {
+      //     // validTariff =
+      //     //   tariffData.results.find(
+      //     //     (tariff: Tariff) =>
+      //     //       tariff.tariffType === "DEFAULT" ||
+      //     //       tariff.tariffType === "STANDARD"
+      //     //   ) || tariffData.results[0];
+
+      //     let validTariff: Tariff | undefined;
+      //     let deliveryRateAmount: number | undefined;
+
+      //     for (const tariff of tariffData.results) {
+      //       const matchingRate = tariff.rates?.find(
+      //         (rate: any) =>
+      //           rate.rateGroupName === "Delivery Charges" &&
+      //           rate.chargeType === "CONSUMPTION_BASED" &&
+      //           rate.chargeClass === "DISTRIBUTION" &&
+      //           Array.isArray(rate.rateBands) &&
+      //           rate.rateBands.length > 0
+      //       );
+
+      //       if (matchingRate) {
+      //         validTariff = tariff;
+      //         deliveryRateAmount = matchingRate.rateBands[0].rateAmount;
+      //         break;
+      //       }
+      //     }
+      //   } else {
+      //     // Fallback if no match found
+      //     if (!validTariff) {
+      //       validTariff =
+      //         tariffData.results.find(
+      //           (tariff: Tariff) =>
+      //             tariff.tariffType === "DEFAULT" ||
+      //             tariff.tariffType === "STANDARD"
+      //         ) || tariffData.results[0];
+      //     }
+      //   }
+      // }
+
+      // // Use utility-specific fallback price if no rateBands (e.g., SCE average)
+      // const pricePerKwh =
+      //   validTariff.rateBands?.[0]?.rateAmount ||
+      //   (lseId === 1228 ? 0.28 : 0.15); // SCE average ~$0.28/kWh
       let page = 1;
       const pageSize = 25;
-      const today = new Date().toISOString().split("T")[0]; // Current date for effectiveOn
+      const today = new Date().toISOString().split("T")[0];
+      let deliveryRateAmount: number | null = null;
 
-      while (!validTariff) {
-        const tariffRes = await fetch(
-          `https://api.genability.com/rest/public/tariffs?lseId=${lseId}&customerClasses=RESIDENTIAL&effectiveOn=${today}&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}&start=${
+      while (!deliveryRateAmount) {
+        const response = await fetch(
+          `https://api.genability.com/rest/public/tariffs?lseId=${lseId}&customerClasses=RESIDENTIAL&tariffType=DEFAULT&sortOn=tariffType&populateRates=true&effectiveOn=${today}&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}&start=${
             (page - 1) * pageSize + 1
           }&pageCount=${pageSize}`
         );
-        if (!tariffRes.ok) {
+
+        if (!response.ok) {
           throw new Error(
-            `Tariff API error: ${tariffRes.status} ${tariffRes.statusText}`
+            `Tariff API error: ${response.status} ${response.statusText}`
           );
         }
 
-        const tariffData = await tariffRes.json();
-        console.log("Tariff data:", tariffData);
-        console.log(
-          "Tariff results:",
-          JSON.stringify(tariffData.results, null, 2)
-        );
+        const data = await response.json();
+        const tariffs: Tariff[] = data.results;
 
-        if (!tariffData.results || tariffData.results.length === 0) {
-          setShowNoTariffModal(true);
-          //return null; // prevent navigation
-        } else {
-          setShowNoTariffModal(true);
-          return null;
+        // if (!tariffs || tariffs.length === 0) {
+        //   setShowNoTariffModal(true);
+        //   return null;
+        // }
+
+        for (const tariff of tariffs) {
+          if (Array.isArray(tariff.rates)) {
+            for (const rate of tariff.rates) {
+              if (
+                rate.rateGroupName === "Delivery Charges" &&
+                rate.chargeType === "CONSUMPTION_BASED" &&
+                rate.chargeClass === "DISTRIBUTION" &&
+                Array.isArray(rate.rateBands) &&
+                rate.rateBands.length > 0
+              ) {
+                deliveryRateAmount = rate.rateBands[0].rateAmount;
+                break;
+              }
+            }
+          }
+          if (deliveryRateAmount !== null) {
+            break;
+          }
         }
-
-        validTariff = tariffData.results.find(
-          (tariff: Tariff) => tariff.rateBands && tariff.rateBands.length > 0
-        );
-
-        if (!validTariff && tariffData.count > page * pageSize) {
+        // Continue to next page if more results exist and not yet found
+        if (deliveryRateAmount === null && data.count > page * pageSize) {
           page++;
-        } else if (!validTariff) {
-          console.warn(
-            "No tariffs with rateBands found, using fallback tariff."
-          );
-          validTariff =
-            tariffData.results.find(
-              (tariff: Tariff) =>
-                tariff.tariffType === "DEFAULT" ||
-                tariff.tariffType === "STANDARD"
-            ) || tariffData.results[0];
         } else {
           break;
         }
       }
-
-      // Use utility-specific fallback price if no rateBands (e.g., SCE average)
+      // Final fallback value if no delivery rate found
       const pricePerKwh =
-        validTariff.rateBands?.[0]?.rateAmount ||
-        (lseId === 1228 ? 0.28 : 0.15); // SCE average ~$0.28/kWh
+        deliveryRateAmount !== null
+          ? deliveryRateAmount
+          : lseId === 1228
+          ? 0.28
+          : 0.15;
+
       const estimatedMonthlyKwh = monthlyBill / pricePerKwh;
       const recommendedSizeKw = (estimatedMonthlyKwh * 12) / 1500; // 1500 kWh/kW/year
       const estimatedAnnualSavings =
@@ -416,6 +516,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
               );
 
               if (hasParentIds) {
+                console.log(hasParentIds);
                 // Extract all parentTerritoryIds
                 const parentIds = [
                   ...new Set(
@@ -429,17 +530,19 @@ export default function DesignForm({ onBack }: DesignFormProps) {
                 const filtered = territoryList.filter(
                   (t) =>
                     parentIds.includes(t.territoryId) &&
-                    t.itemTypes !== "ZIPCODE"
+                    t.deregRes == true &&
+                    t.deregRes == true
                 );
 
                 setTerritories(filtered);
               } else {
+                console.log("No parentTerritoryId found");
                 // If no parentTerritoryId is found, pick the top record (if exists)
                 const filteredList = territoryList.filter(
                   (t) => t.itemTypes !== "ZIPCODE"
                 );
-                const first = filteredList.length > 0 ? [filteredList[0]] : [];
-                setTerritories(first);
+                //const first = filteredList.length > 0 ? [filteredList[0]] : [];
+                setTerritories(filteredList);
               }
             } else {
               setTerritories([]);
