@@ -6,6 +6,8 @@ import {
   DollarSign,
   Search,
   Zap,
+  ChevronDown,
+  CheckCircle,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { AnalyticsEvents, trackEvent } from "../../lib/analytics";
@@ -100,8 +102,28 @@ export default function DesignForm({ onBack }: DesignFormProps) {
   const [monthlyConsumption, setMonthlyConsumption] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  type Territory = {
+    territoryId: number;
+    territoryName: string;
+    lseId: number;
+    lseName: string;
+    usageType: string;
+    itemTypes: string;
+    deregRes: boolean;
+    deregCandi: boolean;
+    centerPoint: {
+      latitude: number;
+      longitude: number;
+    };
+  };
 
   const addressInputRef = useRef<HTMLInputElement>(null);
+  const [territories, setTerritories] = useState<Territory[]>([]);
+  const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(
+    null
+  );
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showNoTariffModal, setShowNoTariffModal] = useState(false);
 
   // Fallback API keys (for debugging only; move to backend in production)
   // const GENABILITY_APP_ID =
@@ -140,25 +162,12 @@ export default function DesignForm({ onBack }: DesignFormProps) {
         throw new Error("Invalid coordinates provided.");
       }
 
-      // Fetch territory data
-      const territoryRes = await fetch(
-        `https://api.genability.com/rest/public/territories?latitude=${address.lat}&longitude=${address.lng}&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}`
-      );
-      if (!territoryRes.ok) {
-        throw new Error(
-          `Territory API error: ${territoryRes.status} ${territoryRes.statusText}`
-        );
-      }
-
-      const territoryData = await territoryRes.json();
-      const territory = territoryData.results?.[0];
-
-      if (!territory || !territory.lseId) {
+      if (!selectedTerritory || !selectedTerritory.lseId) {
         throw new Error("No valid utility found for this location.");
       }
 
-      const lseId = territory.lseId;
-      console.log("lseId:", lseId, "Utility Name:", territory.lseName);
+      const lseId = selectedTerritory.lseId;
+      console.log("lseId:", lseId, "Utility Name:", selectedTerritory.lseName);
 
       // Fetch tariff data with pagination, targeting active tariffs
       let validTariff = null;
@@ -186,7 +195,11 @@ export default function DesignForm({ onBack }: DesignFormProps) {
         );
 
         if (!tariffData.results || tariffData.results.length === 0) {
-          throw new Error("No tariffs returned by the API.");
+          setShowNoTariffModal(true);
+          //return null; // prevent navigation
+        } else {
+          setShowNoTariffModal(true);
+          return null;
         }
 
         validTariff = tariffData.results.find(
@@ -220,7 +233,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
         estimatedMonthlyKwh * 12 * pricePerKwh * 0.8; // 80% savings
 
       return {
-        utilityName: territory.lseName || "Unknown Utility",
+        utilityName: selectedTerritory.lseName || "Unknown Utility",
         pricePerKwh,
         estimatedMonthlyKwh,
         recommendedSizeKw,
@@ -331,7 +344,6 @@ export default function DesignForm({ onBack }: DesignFormProps) {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     if (addressInputRef.current && window.google) {
       const autocomplete = new window.google.maps.places.Autocomplete(
@@ -343,13 +355,53 @@ export default function DesignForm({ onBack }: DesignFormProps) {
         }
       );
 
-      autocomplete.addListener("place_changed", () => {
+      autocomplete.addListener("place_changed", async () => {
         const place = autocomplete.getPlace();
-        if (place.geometry?.location) {
-          setFormattedAddress(place.formatted_address || "");
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
-          setAddress({ lat, lng });
+        const address = place.formatted_address;
+        const lataddress = place.geometry?.location?.lat();
+        const lngaddress = place.geometry?.location?.lng();
+        let postalCode: string | undefined = undefined;
+
+        // Extract postal code from address_components
+        if (place.address_components) {
+          for (const component of place.address_components) {
+            if (component.types.includes("postal_code")) {
+              postalCode = component.long_name;
+              break;
+            }
+          }
+        }
+
+        if (address && place.geometry?.location) {
+          setFormattedAddress(address);
+          if (place.geometry?.location) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+            setAddress({ lat, lng });
+          }
+          try {
+            const response = await fetch(
+              `https://api.genability.com/rest/public/territories?postCode=${postalCode}&longitude=${lngaddress}&latitude=${lataddress}&country=US&residentialServiceTypes=ELECTRICITY&appId=${GENABILITY_APP_ID}&appKey=${GENABILITY_API_KEY}`
+            );
+
+            //const data = await response.json();
+            const data = (await response.json()) as {
+              status: string;
+              results: Territory[];
+            };
+
+            if (data.status === "success") {
+              const filteredResults: Territory[] = data.results.filter(
+                (item) => item.deregRes && item.deregCandi
+              );
+
+              setTerritories(filteredResults); // ✅ filteredResults is of type Territory[]
+            } else {
+              setTerritories([]);
+            }
+          } catch (error) {
+            console.error("Error fetching territories:", error);
+          }
         }
       });
     }
@@ -357,7 +409,12 @@ export default function DesignForm({ onBack }: DesignFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address.lat || !address.lng || monthlyBill <= 0) {
+    if (
+      !address.lat ||
+      !selectedTerritory ||
+      !address.lng ||
+      monthlyBill <= 0
+    ) {
       setError("Please enter a valid address and monthly bill.");
       return;
     }
@@ -376,7 +433,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
         setSolarData(solarInfo); // Update state here
         setShowResults(true);
       } else {
-        setError("Failed to process data. Please try again.");
+        //setError("Failed to process data. Please try again.");
       }
     } catch (err: unknown) {
       console.error("Error fetching data:", err);
@@ -1009,8 +1066,77 @@ export default function DesignForm({ onBack }: DesignFormProps) {
                 />
                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
               </motion.div>
-            </motion.div>
 
+              {/* Dropdown appears after address is selected */}
+              {territories.length > 0 && (
+                <div className="mt-4 relative">
+                  <label className="block text-sm font-medium text-gray-400 tracking-wide uppercase">
+                    Choose Territory
+                  </label>
+
+                  {/* Styled input that acts like a dropdown toggle */}
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() => setShowDropdown(!showDropdown)}
+                  >
+                    <input
+                      readOnly
+                      value={
+                        selectedTerritory
+                          ? `${selectedTerritory.lseName} (${selectedTerritory.territoryName})`
+                          : ""
+                      }
+                      placeholder="Select a territory"
+                      className="w-full pl-4 pr-10 py-5 bg-black/40 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/60 transition-all duration-300"
+                    />
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/5 via-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  </div>
+                  {showNoTariffModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                      <div className="bg-gray-900 border border-white/10 p-8 rounded-2xl w-full max-w-md text-center">
+                        <div className="flex justify-center mb-6">
+                          <CheckCircle className="w-16 h-16 text-green-400" />
+                        </div>
+                        <h2 className="text-2xl font-light text-white mb-4">
+                          Tariff Not Found
+                        </h2>
+                        <p className="text-gray-400 text-lg mb-8">
+                          No valid utility tariffs found for this address.
+                          Please select another address.
+                        </p>
+                        <motion.button
+                          onClick={() => setShowNoTariffModal(false)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="relative z-10 w-full h-[52px] flex items-center justify-center gap-3 px-8 text-white rounded-full shadow-xl transition-all duration-500 bg-blue-500 hover:bg-blue-600 text-sm font-medium tracking-wider"
+                        >
+                          Close
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                        </motion.button>
+                      </div>
+                    </div>
+                  )}
+                  {/* Dropdown list */}
+                  {showDropdown && (
+                    <ul className="absolute z-10 mt-2 w-full max-h-60 overflow-y-auto bg-black/80 border border-white/10 rounded-xl text-white shadow-lg">
+                      {territories.map((territory) => (
+                        <li
+                          key={territory.territoryId}
+                          className="px-4 py-3 hover:bg-white/10 cursor-pointer transition"
+                          onClick={() => {
+                            setSelectedTerritory(territory);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          {territory.lseName} ({territory.territoryName})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </motion.div>
             <AnimatePresence mode="wait">
               {!showKwh ? (
                 <motion.div
@@ -1136,7 +1262,11 @@ export default function DesignForm({ onBack }: DesignFormProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={
-                  isLoading || !address.lat || !address.lng || monthlyBill <= 0
+                  isLoading ||
+                  !selectedTerritory ||
+                  !address.lat ||
+                  !address.lng ||
+                  monthlyBill <= 0
                 }
                 className="relative z-10 w-full h-[52px] flex items-center justify-center gap-3 px-8 text-white rounded-full shadow-xl transition-all duration-500 bg-blue-500 hover:bg-blue-600 text-sm font-medium tracking-wider group disabled:opacity-50"
               >
