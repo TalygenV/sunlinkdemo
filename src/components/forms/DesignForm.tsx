@@ -1219,7 +1219,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
               {territories.length > 0 && (
                 <div className="mt-4 relative">
                   <label className="block text-sm font-medium text-gray-400 tracking-wide uppercase">
-                    Choose Territory
+                    Choose Utility
                   </label>
 
                   {/* Styled input that acts like a dropdown toggle */}
@@ -1234,7 +1234,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
                           ? `${selectedTerritory.lseName} (${selectedTerritory.territoryName})`
                           : ""
                       }
-                      placeholder="Select a territory"
+                      placeholder="Select a Utility"
                       className="w-full pl-4 pr-10 py-5 bg-black/40 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/60 transition-all duration-300"
                     />
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
