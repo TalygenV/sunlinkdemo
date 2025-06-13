@@ -115,6 +115,7 @@ export default function DesignForm({ onBack }: DesignFormProps) {
       latitude: number;
       longitude: number;
     };
+    parentTerritoryId?: number;
   };
 
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -385,17 +386,61 @@ export default function DesignForm({ onBack }: DesignFormProps) {
             );
 
             //const data = await response.json();
+            // const data = (await response.json()) as {
+            //   status: string;
+            //   results: Territory[];
+            // };
+
+            // if (data.status === "success") {
+            //   const filteredResults: Territory[] = data.results.filter(
+            //     (item) => item.deregRes && item.deregCandi
+            //   );
+
+            //   setTerritories(filteredResults); //
+            // } else {
+            //   setTerritories([]);
+            // }
+
+            //const data = await response.json();
             const data = (await response.json()) as {
               status: string;
               results: Territory[];
             };
 
             if (data.status === "success") {
-              const filteredResults: Territory[] = data.results.filter(
-                (item) => item.deregRes && item.deregCandi
+              const territoryList = data.results || [];
+
+              // Check if at least one item has parentTerritoryId
+              const hasParentIds = territoryList.some(
+                (t) => t.parentTerritoryId
               );
 
-              setTerritories(filteredResults); // ✅ filteredResults is of type Territory[]
+              if (hasParentIds) {
+                // Extract all parentTerritoryIds
+                const parentIds = [
+                  ...new Set(
+                    territoryList
+                      .filter((t) => t.parentTerritoryId)
+                      .map((t) => t.parentTerritoryId)
+                  ),
+                ];
+
+                // Filter records whose territoryId matches any parentTerritoryId
+                const filtered = territoryList.filter(
+                  (t) =>
+                    parentIds.includes(t.territoryId) &&
+                    t.itemTypes !== "ZIPCODE"
+                );
+
+                setTerritories(filtered);
+              } else {
+                // If no parentTerritoryId is found, pick the top record (if exists)
+                const filteredList = territoryList.filter(
+                  (t) => t.itemTypes !== "ZIPCODE"
+                );
+                const first = filteredList.length > 0 ? [filteredList[0]] : [];
+                setTerritories(first);
+              }
             } else {
               setTerritories([]);
             }
