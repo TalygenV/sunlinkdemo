@@ -45,7 +45,7 @@ export default function SignInModal({
     phone: "",
     email: "",
     password: "",
-    verificationCode: ""
+    verificationCode: "",
   });
   const navigate = useNavigate();
   const recaptchaContainerRef = React.useRef<HTMLDivElement>(null);
@@ -101,60 +101,75 @@ export default function SignInModal({
 
   const validatePhoneNumber = (phone: string) => {
     if (!phone) {
-      setFormErrors(prev => ({ ...prev, phone: "Phone number is required" }));
+      setFormErrors((prev) => ({ ...prev, phone: "Phone number is required" }));
       return false;
     }
     if (!/^\+?[1-9]\d{1,14}$/.test(phone)) {
-      setFormErrors(prev => ({ ...prev, phone: "Please enter a valid phone number" }));
+      setFormErrors((prev) => ({
+        ...prev,
+        phone: "Please enter a valid phone number",
+      }));
       return false;
     }
-    setFormErrors(prev => ({ ...prev, phone: "" }));
+    setFormErrors((prev) => ({ ...prev, phone: "" }));
     return true;
   };
 
   const validateEmail = (email: string) => {
     if (!email) {
-      setFormErrors(prev => ({ ...prev, email: "Email is required" }));
+      setFormErrors((prev) => ({ ...prev, email: "Email is required" }));
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFormErrors(prev => ({ ...prev, email: "Please enter a valid email address" }));
+      setFormErrors((prev) => ({
+        ...prev,
+        email: "Please enter a valid email address",
+      }));
       return false;
     }
-    setFormErrors(prev => ({ ...prev, email: "" }));
+    setFormErrors((prev) => ({ ...prev, email: "" }));
     return true;
   };
 
   const validatePassword = (password: string) => {
     if (!password) {
-      setFormErrors(prev => ({ ...prev, password: "Password is required" }));
+      setFormErrors((prev) => ({ ...prev, password: "Password is required" }));
       return false;
     }
     if (password.length < 6) {
-      setFormErrors(prev => ({ ...prev, password: "Password must be at least 6 characters" }));
+      setFormErrors((prev) => ({
+        ...prev,
+        password: "Password must be at least 6 characters",
+      }));
       return false;
     }
-    setFormErrors(prev => ({ ...prev, password: "" }));
+    setFormErrors((prev) => ({ ...prev, password: "" }));
     return true;
   };
 
   const validateVerificationCode = (code: string) => {
     if (!code) {
-      setFormErrors(prev => ({ ...prev, verificationCode: "Verification code is required" }));
+      setFormErrors((prev) => ({
+        ...prev,
+        verificationCode: "Verification code is required",
+      }));
       return false;
     }
     if (!/^\d{6}$/.test(code)) {
-      setFormErrors(prev => ({ ...prev, verificationCode: "Please enter a valid 6-digit code" }));
+      setFormErrors((prev) => ({
+        ...prev,
+        verificationCode: "Please enter a valid 6-digit code",
+      }));
       return false;
     }
-    setFormErrors(prev => ({ ...prev, verificationCode: "" }));
+    setFormErrors((prev) => ({ ...prev, verificationCode: "" }));
     return true;
   };
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validatePhoneNumber(phoneNumber)) return;
-    
+
     setLoading(true);
     setError("");
 
@@ -182,7 +197,7 @@ export default function SignInModal({
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateVerificationCode(verificationCode)) return;
-    
+
     setLoading(true);
     setError("");
 
@@ -249,7 +264,7 @@ export default function SignInModal({
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateEmail(email) || !validatePassword(password)) return;
-    
+
     setLoading(true);
     setError("");
 
@@ -272,6 +287,10 @@ export default function SignInModal({
           },
           { merge: true }
         );
+        console.log("emailGlobal", user.email || "");
+        localStorage.setItem("emailGlobal", user.email || "");
+        console.log("nameGlobal", user.displayName || "");
+        localStorage.setItem("nameGlobal", user.displayName || "");
       } else {
         userCredential = await signInWithEmailAndPassword(
           auth,
@@ -281,9 +300,16 @@ export default function SignInModal({
         const userDoc = await getDoc(
           doc(firestore, "users", userCredential.user.uid)
         );
+
         const userData = userDoc.exists() ? userDoc.data() : null;
         const userRole = userData?.role || "Customer";
-
+        console.log("emailGlobal", userCredential.user.email || "");
+        localStorage.setItem("emailGlobal", userCredential.user.email || "");
+        console.log("nameGlobal", userCredential.user.displayName || "");
+        localStorage.setItem(
+          "nameGlobal",
+          userCredential.user.displayName || ""
+        );
         if (userRole === "Admin") {
           navigate("/admin-portal");
         } else if (userRole === "Installer") {
@@ -318,51 +344,60 @@ export default function SignInModal({
         onClose();
       }
     } catch (err: any) {
-      console.log('Firebase Error:', err); // Debug log
+      console.log("Firebase Error:", err); // Debug log
       trackEvent(AnalyticsEvents.SIGN_IN_ERROR, {
         method: "email",
         error: err.message,
       });
-      
+
       // Convert Firebase error messages to user-friendly messages
-      let userFriendlyError = "An error occurred during sign in. Please try again.";
-      
+      let userFriendlyError =
+        "An error occurred during sign in. Please try again.";
+
       // Handle FirebaseError
       if (err.code) {
         switch (err.code) {
-          case 'auth/invalid-email':
+          case "auth/invalid-email":
             userFriendlyError = "Please enter a valid email address.";
             break;
-          case 'auth/user-disabled':
-            userFriendlyError = "This account has been disabled. Please contact support.";
+          case "auth/user-disabled":
+            userFriendlyError =
+              "This account has been disabled. Please contact support.";
             break;
-          case 'auth/user-not-found':
-            userFriendlyError = "No account found with this email. Please sign up first.";
+          case "auth/user-not-found":
+            userFriendlyError =
+              "No account found with this email. Please sign up first.";
             break;
-          case 'auth/wrong-password':
+          case "auth/wrong-password":
             userFriendlyError = "Incorrect password. Please try again.";
             break;
-          case 'auth/email-already-in-use':
-            userFriendlyError = "This email is already registered. Please sign in instead.";
+          case "auth/email-already-in-use":
+            userFriendlyError =
+              "This email is already registered. Please sign in instead.";
             break;
-          case 'auth/weak-password':
-            userFriendlyError = "Password should be at least 6 characters long.";
+          case "auth/weak-password":
+            userFriendlyError =
+              "Password should be at least 6 characters long.";
             break;
-          case 'auth/operation-not-allowed':
-            userFriendlyError = "Email/password accounts are not enabled. Please contact support.";
+          case "auth/operation-not-allowed":
+            userFriendlyError =
+              "Email/password accounts are not enabled. Please contact support.";
             break;
-          case 'auth/too-many-requests':
-            userFriendlyError = "Too many failed attempts. Please try again later.";
+          case "auth/too-many-requests":
+            userFriendlyError =
+              "Too many failed attempts. Please try again later.";
             break;
-          case 'auth/invalid-credential':
-            userFriendlyError = "Invalid email or password. Please check your credentials and try again.";
+          case "auth/invalid-credential":
+            userFriendlyError =
+              "Invalid email or password. Please check your credentials and try again.";
             break;
           default:
-            console.log('Unhandled Firebase Error:', err);
-            userFriendlyError = "An error occurred during sign in. Please try again.";
+            console.log("Unhandled Firebase Error:", err);
+            userFriendlyError =
+              "An error occurred during sign in. Please try again.";
         }
       }
-      
+
       setError(userFriendlyError);
     } finally {
       setLoading(false);
@@ -372,7 +407,7 @@ export default function SignInModal({
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateEmail(email)) return;
-    
+
     setLoading(true);
     setError("");
 
@@ -408,7 +443,11 @@ export default function SignInModal({
             <p className="text-gray-400 text-sm">
               Enter your phone number to sign in
             </p>
-            <form onSubmit={handleSendCode} className="mt-8 space-y-6" noValidate>
+            <form
+              onSubmit={handleSendCode}
+              className="mt-8 space-y-6"
+              noValidate
+            >
               <div>
                 <button
                   type="button"
@@ -426,14 +465,16 @@ export default function SignInModal({
                     value={phoneNumber}
                     onChange={(e) => {
                       setPhoneNumber(e.target.value);
-                      setFormErrors(prev => ({ ...prev, phone: "" }));
+                      setFormErrors((prev) => ({ ...prev, phone: "" }));
                     }}
                     placeholder="(555) 555-5555"
                     className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/20"
                   />
                 </div>
                 {formErrors.phone && (
-                  <p className="mt-2 text-sm text-red-400">{formErrors.phone}</p>
+                  <p className="mt-2 text-sm text-red-400">
+                    {formErrors.phone}
+                  </p>
                 )}
               </div>
               <motion.button
@@ -468,7 +509,11 @@ export default function SignInModal({
             <p className="text-gray-400 text-sm">
               Enter the verification code sent to your phone
             </p>
-            <form onSubmit={handleVerifyCode} className="mt-8 space-y-6" noValidate>
+            <form
+              onSubmit={handleVerifyCode}
+              className="mt-8 space-y-6"
+              noValidate
+            >
               <div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -477,14 +522,19 @@ export default function SignInModal({
                     value={verificationCode}
                     onChange={(e) => {
                       setVerificationCode(e.target.value);
-                      setFormErrors(prev => ({ ...prev, verificationCode: "" }));
+                      setFormErrors((prev) => ({
+                        ...prev,
+                        verificationCode: "",
+                      }));
                     }}
                     placeholder="Enter 6-digit code"
                     className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-400/20"
                   />
                 </div>
                 {formErrors.verificationCode && (
-                  <p className="mt-2 text-sm text-red-400">{formErrors.verificationCode}</p>
+                  <p className="mt-2 text-sm text-red-400">
+                    {formErrors.verificationCode}
+                  </p>
                 )}
               </div>
               <motion.button
@@ -519,7 +569,11 @@ export default function SignInModal({
             <p className="text-gray-400 text-sm animate-fade-slide-up">
               {isSignUp ? "Sign up with your email" : "Sign in with your email"}
             </p>
-            <form onSubmit={handleEmailAuth} className="mt-8 space-y-6" noValidate>
+            <form
+              onSubmit={handleEmailAuth}
+              className="mt-8 space-y-6"
+              noValidate
+            >
               <div>
                 <button
                   type="button"
@@ -539,14 +593,16 @@ export default function SignInModal({
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
-                      setFormErrors(prev => ({ ...prev, email: "" }));
+                      setFormErrors((prev) => ({ ...prev, email: "" }));
                     }}
                     placeholder="Enter your email"
                     className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/20"
                   />
                 </div>
                 {formErrors.email && (
-                  <p className="mt-2 text-sm text-red-400">{formErrors.email}</p>
+                  <p className="mt-2 text-sm text-red-400">
+                    {formErrors.email}
+                  </p>
                 )}
               </div>
               <div>
@@ -557,14 +613,16 @@ export default function SignInModal({
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
-                      setFormErrors(prev => ({ ...prev, password: "" }));
+                      setFormErrors((prev) => ({ ...prev, password: "" }));
                     }}
                     placeholder="Enter your password"
                     className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/20"
                   />
                 </div>
                 {formErrors.password && (
-                  <p className="mt-2 text-sm text-red-400">{formErrors.password}</p>
+                  <p className="mt-2 text-sm text-red-400">
+                    {formErrors.password}
+                  </p>
                 )}
                 {!isSignUp && (
                   <button
@@ -625,7 +683,9 @@ export default function SignInModal({
       case "forgot-password":
         return (
           <div>
-            <h2 className="mb-6 text-2xl font-bold text-white">Reset Password</h2>
+            <h2 className="mb-6 text-2xl font-bold text-white">
+              Reset Password
+            </h2>
             {resetEmailSent ? (
               <div className="text-center">
                 <p className="mb-4 text-green-400">
@@ -639,7 +699,11 @@ export default function SignInModal({
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-4" noValidate>
+              <form
+                onSubmit={handleForgotPassword}
+                className="space-y-4"
+                noValidate
+              >
                 <div>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -650,14 +714,16 @@ export default function SignInModal({
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
-                        setFormErrors(prev => ({ ...prev, email: "" }));
+                        setFormErrors((prev) => ({ ...prev, email: "" }));
                       }}
                       placeholder="Enter your email"
                       className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/20"
                     />
                   </div>
                   {formErrors.email && (
-                    <p className="mt-2 text-sm text-red-400">{formErrors.email}</p>
+                    <p className="mt-2 text-sm text-red-400">
+                      {formErrors.email}
+                    </p>
                   )}
                 </div>
                 {error && (
@@ -737,8 +803,17 @@ export default function SignInModal({
                     className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20"
                   >
                     <div className="flex items-center gap-2 text-red-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       <p className="text-sm font-medium">{error}</p>
                     </div>
