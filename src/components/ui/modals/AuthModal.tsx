@@ -237,6 +237,9 @@ export default function AuthModal({
             email: user.email,
             createdAt: new Date(),
           });
+          // window.emailGlobal = user.email; // Store email globally for later use
+          console.log("emailGlobal", user.email);
+          localStorage.setItem("emailGlobal", user.email);
           // alert("User successfully added");
         } catch (error) {
           alert("error");
@@ -340,7 +343,9 @@ export default function AuthModal({
       await updateProfile(auth.currentUser, {
         displayName: name,
       });
-
+      //window.nameGlobal = name; // Store name globally for later use
+      console.log("nameGlobal", name);
+      localStorage.setItem("nameGlobal", name);
       // Save user data to Realtime Database
       await set(ref(db, `users/${auth.currentUser.uid}`), {
         name,

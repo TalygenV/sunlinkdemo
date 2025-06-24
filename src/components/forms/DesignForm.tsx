@@ -526,10 +526,9 @@ export default function DesignForm({ onBack }: DesignFormProps) {
                   ),
                 ];
 
-                // Filter records whose territoryId matches any parentTerritoryId demo
-                const filtered = territoryList.filter(
-                  (t) =>
-                    parentIds.includes(t.territoryId) 
+                // Filter records whose territoryId matches any parentTerritoryId
+                const filtered = territoryList.filter((t) =>
+                  parentIds.includes(t.territoryId)
                 );
 
                 setTerritories(filtered);
