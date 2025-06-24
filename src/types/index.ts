@@ -113,6 +113,8 @@ export interface GenabilityData {
   estimatedMonthlyKwh: number;
   recommendedSizeKw: number;
   estimatedAnnualSavings: number;
+  providerAccountId:String;
+  penalCount:number;
 }
 
 export interface Tariff {
@@ -205,7 +207,7 @@ export interface SolarPotentialData {
 }
 
 export interface CallToActionProps {
-  data: SolarPotentialData;
+  data: SolarPotentialData & GenabilityData;
   monthlyConsumption?: number;
   onContinue: () => void;
   onBack: () => void;

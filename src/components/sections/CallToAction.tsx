@@ -5,11 +5,12 @@ import {
   Sun,
   TrendingUp
 } from "lucide-react";
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { Cpu as SolarPanel } from "react-feather";
 import SystemDesign from "../design/SystemDesign";
 import { AuthModal } from "../ui/modals";
 import NumberAnimation from "../ui/NumberAnimation";
+
 
 export default function CallToAction({
   data,
@@ -17,6 +18,55 @@ export default function CallToAction({
   onContinue,
   onBack,
 }: CallToActionProps) {
+    const [kwhData, setKwhData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const base_url = "https://api.genability.com";
+  const basic_token =
+    "NjQ2M2ZmM2EtMTJjZS00MjQ0LWFiMTEtMWQwOTZiNTQwN2M1OjFkMGM5NTI4LTU1NDktNDhhMy1iYTg5LTZkMWJlYTllMzllNQ==";
+    useEffect(() => {
+    const fetchAnalysis = async () => {
+      try {
+        const res = await fetch(
+          `${base_url}/rest/v1/accounts/pid/${data.providerAccountId}/analyses`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Basic ${basic_token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.json();
+          const series = json?.results?.[0]?.series || [];
+
+      const savingsMonthly = series.find(
+        (s: any) => s.displayLabel === "Total Savings (Mo/Year 1)"
+      );
+      const savingsLifetime = series.find(
+        (s: any) => s.displayLabel === "Total Savings (Lifetime)"
+      );
+
+      console.log("💰 Monthly Savings:", savingsMonthly?.cost);
+      console.log("💰 Lifetime Savings:", savingsLifetime?.cost);
+
+      // Optionally, store in state:
+      setKwhData({
+        monthly: savingsMonthly?.cost ?? 0,
+        lifetime: savingsLifetime?.cost ?? 0,
+      });
+      } catch (err: any) {
+        console.error("Error fetching analyses:", err);
+        setError(err.message || "Unknown error");
+      }
+    };
+
+    if (data?.providerAccountId) {
+      fetchAnalysis();
+    }
+  }, [data?.providerAccountId]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [userData, setUserData] = useState<{
     name: string;
@@ -100,6 +150,7 @@ export default function CallToAction({
   const bestAnalysis = validAnalyses
     .filter((analysis: any) => analysis.panelConfigIndex >= 0)
     .reduce((best: any, current: any) => {
+      console.log("current",current);
       if (!data.targetMonthlyBill) {
         // Fallback to highest savings if no monthly bill provided
         const currentSavings =
@@ -227,6 +278,7 @@ export default function CallToAction({
   // Get the selected panel configuration
   const selectedConfig =
     data.solarPotential?.solarPanelConfigs[bestAnalysis.panelConfigIndex];
+    console.log("selectedConfig",selectedConfig);
   annualProduction = selectedConfig?.yearlyEnergyDcKwh || 0;
   panelCount = selectedConfig?.panelsCount || 0;
 
@@ -283,6 +335,7 @@ export default function CallToAction({
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Savings Card */}
+            {kwhData && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -293,26 +346,32 @@ export default function CallToAction({
               <div className="flex items-start justify-between mb-6 ">
                 <div>
                   <h3 className="text-2xl font-light text-white mb-2">
-                    20 Year Savings
+                    25 Year Savings
                   </h3>
                   <p className="text-gray-400">Total financial benefit</p>
                 </div>
                 <DollarSign className="w-6 h-6 text-purple-400 text-glow-purple icon-glow-purple" />
               </div>
               <div className="text-4xl md:text-5xl font-light text-white mb-4">
-                <NumberAnimation
-                  value={parseInt(twentyYearSavings)}
-                  prefix="$"
-                />
+                {parseInt(kwhData.lifetime) < 0 ? (
+  <span>
+    ({<NumberAnimation value={Math.abs(parseInt(kwhData.lifetime))} prefix="$" />})
+  </span>
+) : (
+  <NumberAnimation value={parseInt(kwhData.lifetime)} prefix="$" />
+)}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-purple-400 text-glow-purple">
                   <TrendingUp className="w-4 h-4 icon-glow-purple" />
                   <span className="text-sm">
-                    <NumberAnimation
-                      value={parseInt(firstYearSavings)}
-                      prefix="$"
-                    />{" "}
+                    {parseInt(kwhData.monthly) < 0 ? (
+  <span>
+    ({<NumberAnimation value={Math.abs(parseInt(kwhData.monthly))} prefix="$" />})
+  </span>
+) : (
+  <NumberAnimation value={parseInt(kwhData.monthly)} prefix="$" />
+)}{" "}
                     in first year
                   </span>
                 </div>
@@ -320,7 +379,7 @@ export default function CallToAction({
                   <DollarSign className="w-4 h-4 icon-glow-accent" />
                   <span className="text-sm">
                     <NumberAnimation
-                      value={parseInt(federalIncentiveAmount)}
+                      value={0}
                       prefix="$"
                     />{" "}
                     federal tax credit
@@ -328,6 +387,7 @@ export default function CallToAction({
                 </div>
               </div>
             </motion.div>
+            )}
 
             {/* Solar Production Card */}
             <motion.div
@@ -347,7 +407,7 @@ export default function CallToAction({
                 <Sun className="w-6 h-6 text-accent-400 text-glow-accent icon-glow-accent" />
               </div>
               <div className="text-4xl md:text-5xl font-light text-white mb-4">
-                <NumberAnimation value={Math.round(annualProduction)} />
+                <NumberAnimation value={Math.round(data.pricePerKwh)} />
                 <span className="text-lg text-gray-400 ml-2 mt-2">
                   kWh/year
                 </span>
@@ -355,7 +415,7 @@ export default function CallToAction({
               <div className="flex items-center gap-2 text-accent-400 text-glow-accent mt-10 ">
                 <SolarPanel className="w-4 h-4 icon-glow-accent" />
                 <span className="text-sm ">
-                  <NumberAnimation value={panelCount} /> panels (
+                  <NumberAnimation value={Math.round(data.penalCount)} /> panels (
                   {data.solarPotential?.panelCapacityWatts || 0}W each)
                 </span>
               </div>
@@ -363,7 +423,7 @@ export default function CallToAction({
           </div>
 
           {/* Timeline */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
@@ -390,7 +450,7 @@ export default function CallToAction({
                 {data.solarPotential?.panelLifetimeYears || 20} years
               </span>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Additional Details */}
           <motion.div
@@ -401,11 +461,11 @@ export default function CallToAction({
           >
             <div className="text-gray-400">
               <span className="block text-white">Panels</span>
-              {panelCount}
+              {Math.round(data.penalCount)}
             </div>
             <div className="text-gray-400">
               <span className="block text-white">System Size</span>
-              {((panelCount * 400) / 1000).toFixed(1)} kW
+              {Math.round((data.estimatedMonthlyKwh)).toFixed(1)} kW
             </div>
             <div className="text-gray-400">
               <span className="block text-white">Location</span>
@@ -459,7 +519,7 @@ export default function CallToAction({
               </motion.button>
             </div>
           </div> */}
-<motion.button
+  <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowAuthModal(true)}
