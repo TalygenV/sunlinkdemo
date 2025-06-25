@@ -411,7 +411,7 @@ console.log("recommendedSizeKw",recommendedSizeKw);
         }`
       );
       const data = await response.json();
-      console.log("Solar data:", data);
+
 
       if (data.error) {
         throw new Error(
@@ -582,6 +582,7 @@ try {
 
       if (genabilityInfo) {
         setGenabilityData(genabilityInfo);
+        solarInfo.estimatedMonthlyKwh = genabilityInfo.estimatedMonthlyKwh;
         setSolarData(solarInfo); // Update state here
         setShowResults(true);
       } else {

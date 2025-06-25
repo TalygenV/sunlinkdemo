@@ -22,6 +22,7 @@ export interface SavingsData {
 
 export interface SolarData {
   name: string;
+  estimatedMonthlyKwh?:number;
   targetMonthlyBill?: number;
   center: {
     latitude: number;
