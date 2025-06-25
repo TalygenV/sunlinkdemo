@@ -295,55 +295,7 @@ function PlanSelection({
         </div>
       )}
 
-      {/* Add Mosaic Financing Options */}
-      <div
-        className="bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-700"
-        style={{ display: "none" }}
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <CheckIcon className="text-green-400" size={24} />
-          <h2 className="text-2xl font-bold text-white">
-            Mosaic Financing Options
-          </h2>
-        </div>
-        {mosaicLoading && (
-          <div className="text-slate-400">Loading Mosaic options...</div>
-        )}
-        {!mosaicLoading && (
-          <>
-            <select
-              className="mb-4 p-2 rounded border border-slate-600 bg-slate-900 text-white"
-              onChange={(e) => {
-                const product = mosaicProducts.find(
-                  (p: any) => p.id === e.target.value
-                );
-                setSelectedMosaicProduct(product);
-              }}
-              value={selectedMosaicProduct?.id || ""}
-            >
-              <option value="">Select Mosaic Loan Product</option>
-              {mosaicProducts.map((product: any) => (
-                <option key={product.id} value={product.id}>
-                  {product.name || product.title || product.productName}
-                </option>
-              ))}
-            </select>
-            {mosaicEstimate && (
-              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 mt-2">
-                <div className="text-slate-400 mb-1">Estimated Payment</div>
-                <div className="text-2xl font-bold text-white">
-                  $
-                  {mosaicEstimate.monthlyPayment?.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })}
-                  <span className="text-sm text-slate-400">/mo</span>
-                </div>
-                {/* Add more details as needed */}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      
 
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
