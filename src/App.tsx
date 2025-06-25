@@ -229,8 +229,8 @@ function App() {
       }}
     >
       <Router>
-        <Navbar />
         <div className="min-h-screen">
+          <Navbar />
           <Routes>
             {(isInstaller || isAdmin) && (
               <>
