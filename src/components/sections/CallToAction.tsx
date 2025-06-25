@@ -57,6 +57,25 @@ export default function CallToAction({
         monthly: savingsMonthly?.cost ?? 0,
         lifetime: savingsLifetime?.cost ?? 0,
       });
+      const today = new Date().toISOString().split("T")[0];
+      const result = await fetch(
+          `${base_url}/rest/v1/incentives?addressString=${data.name}&customerClasses=RESIDENTIAL&effectiveOn=${today}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Basic ${basic_token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const getRateResult = await result.json();
+
+if (getRateResult.status === "success" && getRateResult.results && getRateResult.results.length > 0) {
+  const rate = getRateResult.results[0].rate;
+  
+} else {
+  console.log("No incentive data found");
+}
       } catch (err: any) {
         console.error("Error fetching analyses:", err);
         setError(err.message || "Unknown error");
@@ -177,7 +196,7 @@ export default function CallToAction({
       return currentDiff < bestDiff ? current : best;
     }, validAnalyses[0]);
 
-  if (!bestAnalysis) {
+  if (!data.estimatedAnnualSavings) {
     return (
       <motion.div
         variants={containerVariants}
