@@ -489,6 +489,7 @@ console.log("recommendedSizeKw",recommendedSizeKw);
   };
   useEffect(() => {
     if (addressInputRef.current && window.google) {
+      console.log("addressInputRef",addressInputRef);
       const autocomplete = new window.google.maps.places.Autocomplete(
         addressInputRef.current,
         {
@@ -497,10 +498,11 @@ console.log("recommendedSizeKw",recommendedSizeKw);
           types: ["address"],
         }
       );
-
+console.log("autocomplete",autocomplete);
       autocomplete.addListener("place_changed", async () => {
         const place = autocomplete.getPlace();
-        const address = place.formatted_address;
+        console.log("addressInputRef.current?.value",addressInputRef.current?.value);
+        const address = addressInputRef.current?.value;
         const lataddress = place.geometry?.location?.lat();
         const lngaddress = place.geometry?.location?.lng();
         let postalCode: string | undefined = undefined;
@@ -526,7 +528,7 @@ console.log("recommendedSizeKw",recommendedSizeKw);
 
 try {
   const response = await fetch(
-    `${base_url}/rest/public/lses?addressString=${encodeURIComponent(address)}&country=US&residentialServiceTypes=ELECTRICITY&sortOn=totalCustomers&sortOrder=DESC`,
+    `${base_url}/rest/public/lses?addressString=${address}&country=US&residentialServiceTypes=ELECTRICITY&sortOn=totalCustomers&sortOrder=DESC`,
     {
       method: 'GET',
       headers: {
@@ -561,6 +563,7 @@ try {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (
       !address.lat ||
       !selectedTerritory ||
@@ -577,8 +580,6 @@ try {
 
       const genabilityInfo = await fetchUtilityAndTariff();
       const solarInfo = await fetchSolarData(address.lat, address.lng);
-      console.log("solarInfo", solarInfo);
-      console.log("genabilityInfo", genabilityInfo);
 
       if (genabilityInfo) {
         setGenabilityData(genabilityInfo);
