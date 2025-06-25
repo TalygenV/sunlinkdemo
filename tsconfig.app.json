@@ -11,5 +11,6 @@
     "types": ["vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "allowImportingTsExtensions": true,
   "exclude": ["node_modules"]
 }

@@ -1,32 +1,52 @@
-import React, { useState } from 'react';
-import { RegionType } from './hooks';
-import { Users } from 'lucide-react';
+import React, { useState } from "react";
+import { RegionType } from "./hooks";
+import { Users } from "lucide-react";
 
 export interface RegionFilter {
-  type: RegionType | 'all';
-  installer: string | 'all';
+  type: RegionType | "all";
+  installer: string | "all";
   search: string;
 }
 
 interface ToolbarProps {
   filter: RegionFilter;
-  installers: { id: string; name?: string; companyName?: string }[];
+  installers: {
+    id: string;
+    name?: string;
+    companyName?: string;
+    email?: string;
+  }[];
   onChange: (filter: RegionFilter) => void;
 }
 
-const types: Array<RegionType | 'all'> = ['all', 'zip', 'city', 'county', 'state'];
+const types: Array<RegionType | "all"> = [
+  "all",
+  "zip",
+  "city",
+  "county",
+  "state",
+];
 
-export const Toolbar: React.FC<ToolbarProps> = ({ filter, onChange, installers }) => {
-  const setType = (type: RegionType | 'all') => onChange({ ...filter, type });
-  const setInstaller = (installer: string | 'all') => onChange({ ...filter, installer });
+export const Toolbar: React.FC<ToolbarProps> = ({
+  filter,
+  onChange,
+  installers,
+}) => {
+  const setType = (type: RegionType | "all") => onChange({ ...filter, type });
+  const setInstaller = (installer: string | "all") =>
+    onChange({ ...filter, installer });
   const setSearch = (search: string) => onChange({ ...filter, search });
 
-  // Dropdown open state
   const [isInstallerDropdownOpen, setIsInstallerDropdownOpen] = useState(false);
 
-  const handleInstallerSelect = (installerId: string | 'all') => {
+  const handleInstallerSelect = (installerId: string | "all") => {
     setInstaller(installerId);
     setIsInstallerDropdownOpen(false);
+  };
+
+  const getInstallerNameById = (id: string) => {
+    const installer = installers.find((i) => i.id === id);
+    return installer?.name || installer?.email || "Unknown";
   };
 
   return (
@@ -39,8 +59,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({ filter, onChange, installers }
             onClick={() => setType(t)}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               filter.type === t
-                ? 'bg-black/20 text-yellow-400'
-                : 'text-white/70 hover:bg-white/5'
+                ? "bg-black/20 text-yellow-400"
+                : "text-white/70 hover:bg-white/5"
             }`}
           >
             {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -48,7 +68,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ filter, onChange, installers }
         ))}
       </div>
 
-      {/* Installer dropdown (styled to match projects page) */}
+      {/* Installer dropdown */}
       <div className="relative">
         <button
           onClick={() => setIsInstallerDropdownOpen(!isInstallerDropdownOpen)}
@@ -56,25 +76,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({ filter, onChange, installers }
         >
           <Users size={16} />
           <span>
-            {filter.installer === 'all'
-              ? 'All Installers'
-              : `${
-                  installers.find((i) => i.id === filter.installer)?.companyName ||
-                  installers.find((i) => i.id === filter.installer)?.name ||
-                  'Unknown'
-                }`}
+            {filter.installer === "all"
+              ? "All Installers"
+              : getInstallerNameById(filter.installer)}
           </span>
         </button>
 
         {isInstallerDropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 w-64 z-10 bg-orange-900 border border-white/10 rounded-lg shadow-xl overflow-hidden">
+          <div className="absolute top-full left-0 mt-1 w-64 z-10 bg-orange-900 border border-white/10 rounded-lg shadow-xl overflow-auto max-h-[500px]">
             <div className="p-2">
               <button
-                onClick={() => handleInstallerSelect('all')}
+                onClick={() => handleInstallerSelect("all")}
                 className={`w-full text-left px-3 py-2 rounded-md ${
-                  filter.installer === 'all'
-                    ? 'bg-orange-500/20 text-yellow-400'
-                    : 'text-white/70 hover:bg-white/5'
+                  filter.installer === "all"
+                    ? "bg-orange-500/20 text-yellow-400"
+                    : "text-white/70 hover:bg-white/5"
                 }`}
               >
                 All Installers
@@ -86,11 +102,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({ filter, onChange, installers }
                   onClick={() => handleInstallerSelect(installer.id)}
                   className={`w-full text-left px-3 py-2 rounded-md ${
                     filter.installer === installer.id
-                      ? 'bg-orange-500/20 text-yellow-400'
-                      : 'text-white/70 hover:bg-white/5'
+                      ? "bg-orange-500/20 text-yellow-400"
+                      : "text-white/70 hover:bg-white/5"
                   }`}
                 >
-                  {installer.companyName || installer.name || installer.id}
+                  {installer.name || installer.email || installer.id}
                 </button>
               ))}
             </div>
@@ -108,4 +124,4 @@ export const Toolbar: React.FC<ToolbarProps> = ({ filter, onChange, installers }
       />
     </div>
   );
-}; 
+};
