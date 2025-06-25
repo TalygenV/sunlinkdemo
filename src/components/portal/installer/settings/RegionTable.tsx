@@ -1,7 +1,7 @@
-import React from 'react';
-import { RegionRow } from './hooks';
-import { Pencil, Trash } from 'lucide-react';
-import { RegionFilter } from './Toolbar';
+import React from "react";
+import { RegionRow } from "./hooks";
+import { Pencil, Trash } from "lucide-react";
+import { RegionFilter } from "./Toolbar";
 
 interface RegionTableProps {
   rows: RegionRow[];
@@ -9,10 +9,6 @@ interface RegionTableProps {
   overrideMap: Record<string, boolean>;
   onEdit: (row: RegionRow) => void;
   onDelete: (row: RegionRow) => void;
-  /**
-   * Optional map of installerId ➜ human-readable name. When provided, the table
-   * will display the mapped name instead of the raw id for better readability.
-   */
   installerNameMap?: Record<string, string>;
 }
 
@@ -22,14 +18,16 @@ export const RegionTable: React.FC<RegionTableProps> = ({
   overrideMap,
   onEdit,
   onDelete,
-  installerNameMap
+  installerNameMap,
 }) => {
   const filtered = rows.filter((row) => {
-    if (filter.type !== 'all' && row.type !== filter.type) return false;
-    if (filter.installer !== 'all' && row.installerId !== filter.installer) return false;
+    if (filter.type !== "all" && row.type !== filter.type) return false;
+    if (filter.installer !== "all" && row.installerId !== filter.installer)
+      return false;
     if (filter.search) {
       const q = filter.search.toLowerCase();
-      if (!row.name.toLowerCase().includes(q) && !row.code.includes(q)) return false;
+      if (!row.name?.toLowerCase().includes(q) && !row.code?.includes(q))
+        return false;
     }
     return true;
   });
@@ -42,7 +40,6 @@ export const RegionTable: React.FC<RegionTableProps> = ({
             <th className="py-3 px-4">Region</th>
             <th className="py-3 px-4">Type</th>
             <th className="py-3 px-4">Installer</th>
-        
             <th className="py-3 px-4 text-right"></th>
           </tr>
         </thead>
@@ -50,25 +47,35 @@ export const RegionTable: React.FC<RegionTableProps> = ({
           {filtered.map((row) => {
             const key = `${row.type}-${row.code}`;
             return (
-              <tr key={key} className="border-b border-white/5 hover:bg-white/5">
-                <td className="py-3 px-4 text-white">{row.name}</td>
+              <tr
+                key={key}
+                className="border-b border-white/5 hover:bg-white/5"
+              >
+                <td className="py-3 px-4 text-white">{row.name || row.code}</td>
                 <td className="py-3 px-4">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      row.type === 'zip'
-                        ? 'bg-indigo-500/20 text-indigo-300'
-                        : row.type === 'city'
-                        ? 'bg-purple-500/20 text-purple-300'
-                        : row.type === 'county'
-                        ? 'bg-cyan-500/20 text-cyan-300'
-                        : 'bg-sky-500/20 text-sky-300'
+                      row.type === "zip"
+                        ? "bg-indigo-500/20 text-indigo-300"
+                        : row.type === "city"
+                        ? "bg-purple-500/20 text-purple-300"
+                        : row.type === "county"
+                        ? "bg-cyan-500/20 text-cyan-300"
+                        : "bg-sky-500/20 text-sky-300"
                     }`}
                   >
                     {row.type.toUpperCase()}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-white/90">{installerNameMap ? installerNameMap[row.installerId] : row.installerId}</td>
-             
+                {/* <td className="py-3 px-4 text-white/90">
+                  {installerNameMap?.[row.installerId] || row.installerId}
+                </td> */}
+                <td className="py-3 px-4 text-white/90">
+                  {row.installerName ||
+                    installerNameMap?.[row.installerId] ||
+                    row.installerId}
+                </td>
+
                 <td className="py-3 px-4 flex gap-2 items-center justify-end">
                   <button
                     onClick={() => onEdit(row)}
@@ -89,8 +96,10 @@ export const RegionTable: React.FC<RegionTableProps> = ({
         </tbody>
       </table>
       {filtered.length === 0 && (
-        <p className="text-center py-8 text-white/60">No regions match the current filter.</p>
+        <p className="text-center py-8 text-white/60">
+          No regions match the current filter.
+        </p>
       )}
     </div>
   );
-}; 
+};

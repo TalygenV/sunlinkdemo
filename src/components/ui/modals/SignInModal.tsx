@@ -311,7 +311,7 @@ export default function SignInModal({
           userCredential.user.displayName || ""
         );
         if (userRole === "Admin") {
-          navigate("/admin-portal");
+          navigate("/installer");
         } else if (userRole === "Installer") {
           navigate("/installer");
         } else {

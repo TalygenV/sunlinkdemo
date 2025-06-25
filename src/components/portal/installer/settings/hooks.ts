@@ -1,15 +1,15 @@
-import { ref as dbRef, onValue } from 'firebase/database';
-import { useEffect, useMemo, useState } from 'react';
-import { db } from '../../../../lib/firebase';
+import { ref as dbRef, onValue } from "firebase/database";
+import { useEffect, useMemo, useState } from "react";
+import { db } from "../../../../lib/firebase";
 
-export type RegionType = 'zip' | 'city' | 'county' | 'state';
+export type RegionType = "zip" | "city" | "county" | "state";
 
 export interface RegionRow {
-  type: RegionType;
-  code: string; // slug or postal code
+  type: "zip" | "city" | "county" | "state" | "";
+  code: string;
   name: string;
   installerId: string;
-  updatedAt?: number;
+  installerName?: string; // ✅ Add this new optional field
 }
 
 interface RegionAssignmentsHook {
@@ -20,6 +20,7 @@ interface RegionAssignmentsHook {
 }
 
 interface InstallerInfo {
+  email: string | undefined;
   id: string;
   name?: string;
   companyName?: string;
@@ -46,7 +47,7 @@ function useRealtimeObject<T = any>(path: string): [T | undefined, boolean] {
 }
 
 export function useInstallers(): [InstallerInfo[], boolean] {
-  const [data, loading] = useRealtimeObject<Record<string, any>>('/installers');
+  const [data, loading] = useRealtimeObject<Record<string, any>>("/installers");
 
   const installers = useMemo<InstallerInfo[]>(() => {
     if (!data) return [];
@@ -57,7 +58,7 @@ export function useInstallers(): [InstallerInfo[], boolean] {
 }
 
 export function useRegionAssignments(): RegionAssignmentsHook {
-  const [data, loading] = useRealtimeObject<any>('/regionAssignments');
+  const [data, loading] = useRealtimeObject<any>("/users");
 
   const { rows, overrideMap, dataMap } = useMemo(() => {
     const rows: RegionRow[] = [];
@@ -66,11 +67,11 @@ export function useRegionAssignments(): RegionAssignmentsHook {
       zip: {},
       city: {},
       county: {},
-      state: {}
+      state: {},
     };
 
     if (data) {
-      (['zip', 'city', 'county', 'state'] as RegionType[]).forEach((type) => {
+      (["zip", "city", "county", "state"] as RegionType[]).forEach((type) => {
         const typeMap = data[type] ?? {};
         Object.entries<any>(typeMap).forEach(([code, val]) => {
           const row: RegionRow = {
@@ -78,7 +79,7 @@ export function useRegionAssignments(): RegionAssignmentsHook {
             code,
             name: val.name ?? code,
             installerId: val.installerId,
-            updatedAt: val.updatedAt
+            updatedAt: val.updatedAt,
           };
           rows.push(row);
           dataMap[type][code] = row;
@@ -95,16 +96,19 @@ export function useRegionAssignments(): RegionAssignmentsHook {
         const key = `${row.type}-${row.code}`;
         overrideMap[key] = false;
 
-        if (row.type === 'zip') return; // ZIP has no narrower level
+        if (row.type === "zip") return; // ZIP has no narrower level
 
         const narrower = rows.filter((r) => {
-          if (row.type === 'state') return r.type !== 'state';
-          if (row.type === 'county') return r.type === 'city' || r.type === 'zip';
-          if (row.type === 'city') return r.type === 'zip';
+          if (row.type === "state") return r.type !== "state";
+          if (row.type === "county")
+            return r.type === "city" || r.type === "zip";
+          if (row.type === "city") return r.type === "zip";
           return false;
         });
 
-        overrideMap[key] = narrower.some((r) => r.installerId !== row.installerId);
+        overrideMap[key] = narrower.some(
+          (r) => r.installerId !== row.installerId
+        );
       });
     }
 
@@ -112,4 +116,4 @@ export function useRegionAssignments(): RegionAssignmentsHook {
   }, [data]);
 
   return { rows, overrideMap, dataMap, loading };
-} 
+}
