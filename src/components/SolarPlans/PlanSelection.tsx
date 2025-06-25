@@ -296,7 +296,10 @@ function PlanSelection({
       )}
 
       {/* Add Mosaic Financing Options */}
-      <div className="bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-700">
+      <div
+        className="bg-slate-800/50 rounded-xl p-6 mb-8 border border-slate-700"
+        style={{ display: "none" }}
+      >
         <div className="flex items-center gap-2 mb-4">
           <CheckIcon className="text-green-400" size={24} />
           <h2 className="text-2xl font-bold text-white">
