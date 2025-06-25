@@ -287,6 +287,10 @@ export default function SignInModal({
           },
           { merge: true }
         );
+        console.log("emailGlobal", user.email || "");
+        localStorage.setItem("emailGlobal", user.email || "");
+        console.log("nameGlobal", user.displayName || "");
+        localStorage.setItem("nameGlobal", user.displayName || "");
       } else {
         userCredential = await signInWithEmailAndPassword(
           auth,
@@ -296,9 +300,16 @@ export default function SignInModal({
         const userDoc = await getDoc(
           doc(firestore, "users", userCredential.user.uid)
         );
+
         const userData = userDoc.exists() ? userDoc.data() : null;
         const userRole = userData?.role || "Customer";
-
+        console.log("emailGlobal", userCredential.user.email || "");
+        localStorage.setItem("emailGlobal", userCredential.user.email || "");
+        console.log("nameGlobal", userCredential.user.displayName || "");
+        localStorage.setItem(
+          "nameGlobal",
+          userCredential.user.displayName || ""
+        );
         if (userRole === "Admin") {
           navigate("/installer");
         } else if (userRole === "Installer") {
