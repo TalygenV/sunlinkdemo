@@ -196,7 +196,7 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
       return currentDiff < bestDiff ? current : best;
     }, validAnalyses[0]);
 
-  if (!bestAnalysis) {
+  if (!data.estimatedAnnualSavings) {
     return (
       <motion.div
         variants={containerVariants}
