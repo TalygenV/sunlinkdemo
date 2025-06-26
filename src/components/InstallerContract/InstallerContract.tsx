@@ -1,6 +1,9 @@
+import { httpsCallable } from "firebase/functions";
+import { getFunctions } from "firebase/functions";
 import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
-// Simple SVG icon components to replace lucide-react
+// Simple SVG icon components
 const FileTextIcon = () => (
   <svg
     width="20"
@@ -113,184 +116,146 @@ const UserIcon = () => (
   </svg>
 );
 
+const EditIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M11,4 L4,4 C2.9,4 2,4.9 2,6 L2,20 C2,21.1 2.9,22 4,22 L18,22 C19.1,22 20,21.1 20,20 L20,13" />
+    <path d="M18.5,2.5 C19.3,1.7 20.7,1.7 21.5,2.5 C22.3,3.3 22.3,4.7 21.5,5.5 L12,15 L8,16 L9,12 L18.5,2.5 Z" />
+  </svg>
+);
+
 const InstallerContract: React.FC = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [showSigningModal, setShowSigningModal] = useState(false);
   const [signingUrl, setSigningUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [signedStatus, setSignedStatus] = useState<string | null>(null);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",
+    uid: "",
   });
+  const [error, setError] = useState<string | null>(null);
 
-  // DocuSign configuration - In a real app, these would come from environment variables
-  const CLIENT_ID = import.meta.env.VITE_DOCUSIGN_CLIENT_ID;
-  const ACCOUNT_ID = import.meta.env.VITE_DOCUSIGN_ACCOUNT_ID;
-  const TEMPLATE_ID = import.meta.env.VITE_DOCUSIGN_TEMPLATEID;
-  const REDIRECT_URI = import.meta.env.VITE_DOCUSIGN_REDIRECTURI;
-  const BASE_PATH = "https://demo.docusign.net/restapi";
-  const CLIENT_SECRET = import.meta.env.VITE_DOCUSIGN_CLIENT_SECRET;
+  // Firebase function configuration
+  const FIREBASE_FUNCTION_URL =
+    "https://createsigninglink-6wr3ut5iuq-uc.a.run.app/createSigningLink";
+  const templateId = import.meta.env.VITE_DOCUSIGN_TEMPLATEID; // Replace with your actual template ID
 
   useEffect(() => {
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const token = params.get("access_token");
-    const envelopeId = params.get("envelopeId");
+    // Check URL parameters for signing completion
+    const urlParams = new URLSearchParams(window.location.search);
+    const event = urlParams.get("event");
 
-    const isPopup = window.opener && window.opener !== window;
-
-    if (token) {
-      setAccessToken(token);
-      createEnvelopeForEmbeddedSigning(token);
-      window.history.replaceState({}, document.title, window.location.pathname);
+    if (event === "signing_complete") {
+      handleSigningComplete();
+      // Clean up URL parameters
+      //window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    if (envelopeId) {
-      window.history.replaceState({}, document.title, window.location.pathname);
+    // Initialize user info from storage or show form
+    const storedName = localStorage.getItem("nameGlobal") || "";
+    const storedEmail = localStorage.getItem("emailGlobal") || "";
+    const uidGlobal = localStorage.getItem("uidGlobal") || "";
 
-      if (isPopup) {
-        // Notify the main window
-        window.opener.postMessage({ type: "SIGNING_COMPLETED" }, "*");
-        // Close this popup
-        window.close();
-      } else {
-        // Fallback — maybe user didn't go through popup
-        handleSigningComplete();
-      }
+    if (storedName && storedEmail) {
+      setUserInfo({ name: storedName, email: storedEmail, uid: uidGlobal });
+    } else {
+      setShowUserForm(true);
     }
   }, []);
-  useEffect(() => {
-    // Initialize from global if available
-    debugger;
-    setUserInfo({
-      name: localStorage.getItem("nameGlobal") || "",
-      email: localStorage.getItem("emailGlobal") || "",
-    });
-  }, []);
 
   useEffect(() => {
+    // Listen for messages from signing popup/iframe
     const handleMessage = (event: MessageEvent) => {
-      // Ensure message is from same origin (security)
       if (event.origin !== window.origin) return;
 
       if (event.data?.type === "SIGNING_COMPLETED") {
-        console.log("Received SIGNING_COMPLETED message from popup");
-        setShowSigningModal(false); // ✅ This closes the modal
-        handleSigningComplete();
+        console.log("Received SIGNING_COMPLETED message");
+        setShowSigningModal(false);
+        //handleSigningComplete();
+        setShowUserForm(false);
+        setError(null);
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
-
-  const handleLogin = () => {
-    const authUrl = `https://account-d.docusign.com/oauth/auth?response_type=token&scope=signature%20cors&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
-      REDIRECT_URI
-    )}`;
-    window.location.href = authUrl;
-  };
-
-  const createEnvelopeForEmbeddedSigning = async (token: string) => {
+  useEffect(() => {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = window.location.href;
+    }
+  }, []);
+  const createSigningLink = async () => {
     setIsLoading(true);
+    setError(null);
 
     try {
-      // Create envelope with embedded signing
-      const envelopeResponse = await fetch(
-        `${BASE_PATH}/v2.1/accounts/${ACCOUNT_ID}/envelopes`,
+      debugger;
+      console.log("templateId", templateId);
+      console.log("userInfo", userInfo);
+      const returnUrl = `${window.location.origin}${window.location.pathname}?event=signing_complete`;
+      console.log("returnUrl", returnUrl);
+      const response = await fetch(
+        "https://us-central1-sunlink-21942.cloudfunctions.net/createSigningLink",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
-            templateId: TEMPLATE_ID,
-            templateRoles: [
-              {
-                email: userInfo.email,
-                name: userInfo.name,
-                roleName: "Signer",
-                clientUserId: "embedded_signer_001", // Required for embedded signing
-              },
-            ],
-            status: "sent",
+            signerName: userInfo.name,
+            signerEmail: userInfo.email,
+            returnUrl: returnUrl,
+            templateId: templateId,
           }),
         }
       );
 
-      const envelopeData = await envelopeResponse.json();
-
-      if (!envelopeResponse.ok) {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
         throw new Error(
-          `Failed to create envelope: ${
-            envelopeData.message || "Unknown error"
-          }`
+          errorData?.error || `HTTP error! status: ${response.status}`
         );
       }
 
-      console.log("Envelope created:", envelopeData);
+      const result = await response.json();
 
-      // Get recipient view URL for embedded signing
-      const recipientViewResponse = await fetch(
-        `${BASE_PATH}/v2.1/accounts/${ACCOUNT_ID}/envelopes/${envelopeData.envelopeId}/views/recipient`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userName: userInfo.name,
-            email: userInfo.email,
-            recipientId: "1",
-            clientUserId: "embedded_signer_001",
-            authenticationMethod: "none",
-            returnUrl: `${window.location.origin}/installer-contract#envelopeId=${envelopeData.envelopeId}`,
-          }),
-        }
+      if (result?.url) {
+        setSigningUrl(result.url);
+        setShowSigningModal(true);
+      } else {
+        throw new Error("No signing URL received from server");
+      }
+    } catch (error: any) {
+      console.log("Error creating signing link:", error);
+      setError(
+        error.message || "Failed to create signing link. Please try again."
       );
-
-      const recipientViewData = await recipientViewResponse.json();
-
-      if (!recipientViewResponse.ok) {
-        throw new Error(
-          `Failed to get signing URL: ${
-            recipientViewData.message || "Unknown error"
-          }`
-        );
-      }
-
-      console.log("Recipient view URL:", recipientViewData);
-
-      setSigningUrl(recipientViewData.url);
-      setShowSigningModal(true);
-    } catch (error) {
-      console.error("Error in embedded signing process:", error);
-      // alert(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleSignContract = () => {
-    if (!accessToken) {
-      handleLogin();
-      return;
-    }
-
-    createEnvelopeForEmbeddedSigning(accessToken);
+    createSigningLink();
   };
 
   const handleSigningComplete = () => {
     setSignedStatus("completed");
     setShowSigningModal(false);
-    // Simulate email notifications
+
+    // Show success message
     setTimeout(() => {
-      alert(
-        "🎉 Contract signed successfully! Confirmation emails have been sent to you and our admin team."
-      );
+      setShowSuccessModal(true);
     }, 500);
   };
 
@@ -299,34 +264,9 @@ const InstallerContract: React.FC = () => {
     setShowSigningModal(false);
   };
 
-  // // Listen for messages from the signing iframe
-  // useEffect(() => {
-  //   const handleMessage = (event: MessageEvent) => {
-  //     debugger;
-  //     window.addEventListener("message", handleMessage);
-  //     return () => window.removeEventListener("message", handleMessage);
-  //   };
-  //   debugger;
-  //   const hash = window.location.hash.substring(1);
-  //   const params = new URLSearchParams(hash);
-  //   const envelopeId = params.get("envelopeId");
-  //   if (envelopeId) {
-  //     setShowSigningModal(false);
-  //     handleSigningComplete();
-  //   }
-  //   window.addEventListener("message", handleMessage);
-  //   return () => window.removeEventListener("message", handleMessage);
-  // });
-  // useEffect(() => {
-  //   const handleMessage = (event: MessageEvent) => {
-  //     if (event.data?.type === "SIGNING_COMPLETED") {
-  //       handleSigningComplete();
-  //     }
-  //   };
-
-  //   window.addEventListener("message", handleMessage);
-  //   return () => window.removeEventListener("message", handleMessage);
-  // }, []);
+  const handleEditUserInfo = () => {
+    setShowUserForm(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white p-8">
@@ -338,15 +278,33 @@ const InstallerContract: React.FC = () => {
           </p>
 
           {/* User Info Display */}
-          {accessToken && (
+          {!showUserForm && userInfo.name && userInfo.email && (
             <div className="mt-4 inline-flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700">
               <UserIcon />
               <span className="text-sm text-slate-300">
-                Logged in as: {userInfo.name} ({userInfo.email})
+                {userInfo.name} ({userInfo.email})
               </span>
+              <button
+                onClick={handleEditUserInfo}
+                className="ml-2 text-slate-400 hover:text-white transition-colors"
+                title="Edit user information"
+              >
+                <EditIcon />
+              </button>
             </div>
           )}
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-8 p-4 rounded-lg flex items-center space-x-3 bg-red-900/30 border border-red-700">
+            <AlertCircleIcon />
+            <div>
+              <p className="font-medium text-red-300">Error</p>
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
 
         {/* Status Display */}
         {signedStatus && (
@@ -495,17 +453,51 @@ const InstallerContract: React.FC = () => {
               ) : (
                 <>
                   <CheckCircleIcon />
-                  <span>
-                    {accessToken
-                      ? "Accept & Sign Contract"
-                      : "Login with DocuSign"}
-                  </span>
+                  <span>Accept & Sign Contract</span>
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md p-8 bg-black/90 backdrop-blur-xl rounded-3xl border border-white/10 z-10 text-center"
+            >
+              <h2 className="text-2xl font-medium text-white mb-4">
+                🎉 Document Signed Successfully!
+              </h2>
+              <p className="text-white/70 mb-6">
+                Confirmation emails have been sent to you and our admin team.
+              </p>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setShowSigningModal(false); // Close other modals
+                }}
+                className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 rounded-lg text-white transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* DocuSign Signing Modal */}
       {showSigningModal && (
