@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { getFunctions } from "firebase/functions";
 import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Simple SVG icon components
 const FileTextIcon = () => (
@@ -135,34 +136,37 @@ const InstallerContract: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [signedStatus, setSignedStatus] = useState<string | null>(null);
   const [showUserForm, setShowUserForm] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",
+    uid: "",
   });
   const [error, setError] = useState<string | null>(null);
 
   // Firebase function configuration
-  const FIREBASE_FUNCTION_URL = 'https://createsigninglink-6wr3ut5iuq-uc.a.run.app/createSigningLink';
+  const FIREBASE_FUNCTION_URL =
+    "https://createsigninglink-6wr3ut5iuq-uc.a.run.app/createSigningLink";
   const templateId = import.meta.env.VITE_DOCUSIGN_TEMPLATEID; // Replace with your actual template ID
 
   useEffect(() => {
     // Check URL parameters for signing completion
     const urlParams = new URLSearchParams(window.location.search);
-    const envelopeId = urlParams.get('envelopeId');
-    const event = urlParams.get('event');
+    const event = urlParams.get("event");
 
-    if (envelopeId && event === 'signing_complete') {
+    if (event === "signing_complete") {
       handleSigningComplete();
       // Clean up URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
+      //window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     // Initialize user info from storage or show form
     const storedName = localStorage.getItem("nameGlobal") || "";
     const storedEmail = localStorage.getItem("emailGlobal") || "";
-    
+    const uidGlobal = localStorage.getItem("uidGlobal") || "";
+
     if (storedName && storedEmail) {
-      setUserInfo({ name: storedName, email: storedEmail });
+      setUserInfo({ name: storedName, email: storedEmail, uid: uidGlobal });
     } else {
       setShowUserForm(true);
     }
@@ -178,127 +182,80 @@ const InstallerContract: React.FC = () => {
         setShowSigningModal(false);
         //handleSigningComplete();
         setShowUserForm(false);
-    setError(null);
+        setError(null);
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
- 
+  useEffect(() => {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = window.location.href;
+    }
+  }, []);
   const createSigningLink = async () => {
     setIsLoading(true);
     setError(null);
-  
+
     try {
       debugger;
-      console.log('templateId', templateId);
-      console.log('userInfo', userInfo);
+      console.log("templateId", templateId);
+      console.log("userInfo", userInfo);
       const returnUrl = `${window.location.origin}${window.location.pathname}?event=signing_complete`;
-      console.log('returnUrl', returnUrl);
-      const response = await fetch('https://us-central1-sunlink-21942.cloudfunctions.net/createSigningLink', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        
-        body: JSON.stringify({
-          signerName: userInfo.name,
-          signerEmail: userInfo.email,
-          returnUrl: returnUrl,
-          templateId: templateId
-        })
-      });
-  
+      console.log("returnUrl", returnUrl);
+      const response = await fetch(
+        "https://us-central1-sunlink-21942.cloudfunctions.net/createSigningLink",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            signerName: userInfo.name,
+            signerEmail: userInfo.email,
+            returnUrl: returnUrl,
+            templateId: templateId,
+          }),
+        }
+      );
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData?.error || `HTTP error! status: ${response.status}`
+        );
       }
-  
+
       const result = await response.json();
-  
+
       if (result?.url) {
         setSigningUrl(result.url);
         setShowSigningModal(true);
       } else {
-        throw new Error('No signing URL received from server');
+        throw new Error("No signing URL received from server");
       }
-  
     } catch (error: any) {
-      console.log('Error creating signing link:', error);
-      setError(error.message || 'Failed to create signing link. Please try again.');
+      console.log("Error creating signing link:", error);
+      setError(
+        error.message || "Failed to create signing link. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
   };
-  
-
-
-    // const createSigningLink = async () => {
-    //   setIsLoading(true);
-    //   setError(null);
-    //
-    //   try {
-    //     // Create return URL for after signing
-    //     const returnUrl = `${window.location.origin}${window.location.pathname}?event=signing_complete`;
-    //
-    //     // Direct HTTP call to your Firebase function
-    //     const response = await fetch('https://us-central1-us-central1.cloudfunctions.net/createSigningLink', {
-    //       method: 'POST',
-    //       headers: {
-    //         'Content-Type': 'application/json',
-    //       },
-    //       body: JSON.stringify({
-    //         data: {
-    //           signerName: userInfo.name,
-    //           signerEmail: userInfo.email,
-    //           returnUrl: returnUrl,
-    //           templateId: TEMPLATE_ID
-    //         }
-    //       })
-    //     });
-    //
-    //     if (!response.ok) {
-    //       throw new Error(`HTTP error! status: ${response.status}`);
-    //     }
-    //
-    //     const result = await response.json();
-    //     
-    //     // Extract the signing URL from the result
-    //     const signingUrl = result.result?.url;
-    //     
-    //     if (signingUrl) {
-    //       setSigningUrl(signingUrl);
-    //       setShowSigningModal(true);
-    //     } else {
-    //       throw new Error('No signing URL received from server');
-    //     }
-    //
-    //   } catch (error: any) {
-    //     console.log('Error creating signing link:', error);
-    //     setError(
-    //       error.message || 
-    //       'Failed to create signing link. Please try again or contact support.'
-    //     );
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-
   const handleSignContract = () => {
-    
     createSigningLink();
   };
 
   const handleSigningComplete = () => {
     setSignedStatus("completed");
     setShowSigningModal(false);
-    
+
     // Show success message
     setTimeout(() => {
-      alert(
-        "🎉 Contract signed successfully! Confirmation emails have been sent to you and our admin team."
-      );
+      setShowSuccessModal(true);
     }, 500);
   };
 
@@ -503,7 +460,44 @@ const InstallerContract: React.FC = () => {
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
 
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md p-8 bg-black/90 backdrop-blur-xl rounded-3xl border border-white/10 z-10 text-center"
+            >
+              <h2 className="text-2xl font-medium text-white mb-4">
+                🎉 Document Signed Successfully!
+              </h2>
+              <p className="text-white/70 mb-6">
+                Confirmation emails have been sent to you and our admin team.
+              </p>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setShowSigningModal(false); // Close other modals
+                }}
+                className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 rounded-lg text-white transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* DocuSign Signing Modal */}
       {showSigningModal && (
