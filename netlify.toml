@@ -11,6 +11,17 @@
   to = "/index.html"
   status = 200
 
+  [[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+
 [functions]
   directory = "functions"
   node_bundler = "esbuild" 
+
+
+  
+
+  

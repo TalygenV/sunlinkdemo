@@ -183,10 +183,9 @@ export const ManageInstallersPage: React.FC<ManageRegionsPageProps> = ({
     setTimeout(() => {
       onClose();
     }, 3000);
-    closeModal();
-
     // ✅ Fetch fresh data after save
     fetchData();
+    closeModal();
   };
 
   // const handleDelete = async (row: RegionRow) => {

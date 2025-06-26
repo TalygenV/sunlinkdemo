@@ -2,7 +2,7 @@ import { getAuth } from "firebase/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu } from "lucide-react";
 import React from "react";
-import { matchPath, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { FormContext } from "../../App";
 import sunlinkLogo from "../../images/solar_panels/sunlink_logo.png";
 import { app } from "../../lib/firebase";
@@ -15,7 +15,7 @@ const navItems = [
   { name: "Why Sunlink?", href: "#why-sunlink" },
   { name: "Plans & Pricing", href: "#plans-pricing" },
   { name: "Contact", href: "#contact" },
-  { name: "Sign In", href: "#" }
+  { name: "Sign In", href: "#" },
 ];
 
 const SCROLL_THRESHOLD = 20;
@@ -29,19 +29,11 @@ export default function Navbar() {
     userData,
     setUserData,
   } = React.useContext(FormContext);
+
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [showSignIn, setShowSignIn] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const location = useLocation();
-
-  // Check if the current route matches the SystemDesign paths (covers nested routes too)
-  const isSystemDesignPage =
-    Boolean(matchPath({ path: "/design", end: false }, location.pathname)) ||
-    Boolean(
-      matchPath({ path: "/system-design", end: false }, location.pathname)
-    ) ||
-    location.pathname.includes("/design") ||
-    document.querySelector(".design-route") !== null;
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -52,10 +44,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Don't render navbar on SystemDesign page
-  if (isSystemDesignPage) {
-    return null;
-  }
+  // ✅ ✅ ✅ FIXED: Always render navbar now. Removed page hiding condition ✅ ✅ ✅
 
   return (
     <nav
@@ -72,7 +61,7 @@ export default function Navbar() {
               transition={{ duration: 0.5 }}
               src={sunlinkLogo}
               alt="Unlimited Energy"
-              className="h-7 w-auto transition-opacity duration-300 hover:opacity-90 "
+              className="h-7 w-auto transition-opacity duration-300 hover:opacity-90"
             />
           </div>
 
@@ -125,7 +114,7 @@ export default function Navbar() {
             </AnimatePresence>
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile Menu Button */}
           {!isAuthenticated && (
             <div className="md:hidden">
               <button
@@ -180,20 +169,19 @@ export default function Navbar() {
           </motion.div>
         )}
       </div>
+
       <SignInModal
         isOpen={showSignIn}
         onClose={() => setShowSignIn(false)}
         onSignInSuccess={() => {
-          // Get the current authenticated user from Firebase
           const user = auth.currentUser;
           if (user) {
-            // Update user data with Firebase user info
             setUserData({
               ...userData,
               name: user.displayName || "User",
               phoneNumber: user.phoneNumber || undefined,
-              uid: user.uid, // Important: Set the user's UID for database queries
-              address: userData.address || "3811%20S%20Viking%20Rd", // Keep existing address or use default
+              uid: user.uid,
+              address: userData.address || "3811%20S%20Viking%20Rd",
             });
           }
           setIsAuthenticated(true);
