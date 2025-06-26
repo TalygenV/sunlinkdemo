@@ -38,6 +38,14 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { ref, get } from "firebase/database";
 import { auth, db, firestore } from "./lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { CustomerPortal } from "./components/portal/CustomerPortal";
+import {
+  CustomerPortalLayout,
+  DocumentRepository,
+  InstallationProgressTracker,
+  SystemVisualization,
+} from "./components/portal";
+import { SiteSurvey } from "./components/portal/sitesurvey/SiteSurvey";
 
 // ---------------------------
 // ✅ Context Types
@@ -215,6 +223,8 @@ function App() {
         <div className="min-h-screen">
           <Navbar />
           <Routes>
+            {" "}
+            {/* Installer Portal Routes */}
             {(isInstaller || isAdmin) && (
               <>
                 <Route
@@ -311,7 +321,78 @@ function App() {
                 />
               </>
             )}
-
+            {/* Customer Portal Routes */}
+            <Route
+              path="/portal"
+              element={
+                <RouteController
+                  {...portalAccessProps}
+                  hasCompletedPurchase={hasCompletedPurchase}
+                  portalComponent={<CustomerPortal />}
+                  loadingComponent={<LoadingComponent />}
+                />
+              }
+            />
+            <Route
+              path="/portal/progress"
+              element={
+                <RouteController
+                  {...portalAccessProps}
+                  hasCompletedPurchase={hasCompletedPurchase}
+                  portalComponent={
+                    <CustomerPortalLayout>
+                      <InstallationProgressTracker className="max-w-5xl mx-auto" />
+                    </CustomerPortalLayout>
+                  }
+                  loadingComponent={<LoadingComponent />}
+                />
+              }
+            />
+            <Route
+              path="/portal/documents"
+              element={
+                <RouteController
+                  {...portalAccessProps}
+                  hasCompletedPurchase={hasCompletedPurchase}
+                  portalComponent={
+                    <CustomerPortalLayout>
+                      <DocumentRepository className="max-w-5xl mx-auto" />
+                    </CustomerPortalLayout>
+                  }
+                  loadingComponent={<LoadingComponent />}
+                />
+              }
+            />
+            <Route
+              path="/portal/system"
+              element={
+                <RouteController
+                  {...portalAccessProps}
+                  hasCompletedPurchase={hasCompletedPurchase}
+                  portalComponent={
+                    <CustomerPortalLayout>
+                      <SystemVisualization className="max-w-5xl mx-auto" />
+                    </CustomerPortalLayout>
+                  }
+                  loadingComponent={<LoadingComponent />}
+                />
+              }
+            />
+            <Route
+              path="/portal/sitesurvey"
+              element={
+                <RouteController
+                  {...portalAccessProps}
+                  hasCompletedPurchase={hasCompletedPurchase}
+                  portalComponent={
+                    <CustomerPortalLayout>
+                      <SiteSurvey />
+                    </CustomerPortalLayout>
+                  }
+                  loadingComponent={<LoadingComponent />}
+                />
+              }
+            />
             <Route
               path="/design"
               element={
@@ -322,9 +403,7 @@ function App() {
                 />
               }
             />
-
             <Route path="/design-return" element={<CheckoutReturn />} />
-
             {/* ✅ Updated Home Route */}
             <Route
               index
@@ -368,7 +447,6 @@ function App() {
                 />
               }
             />
-
             <Route path="/order-summary" element={<OrderSummary />} />
             <Route path="/installer-contract" element={<InstallerContract />} />
           </Routes>
@@ -379,7 +457,6 @@ function App() {
 }
 
 export default App;
-
 const LoadingComponent = () => (
   <div className="min-h-screen bg-black text-white flex items-center justify-center">
     Loading...
