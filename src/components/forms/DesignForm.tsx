@@ -279,7 +279,7 @@ const estimatedMonthlyKwh = kwhData?.results?.[0]?.summary?.kW;
         serviceTypes: "SOLAR_PV",
         source: { sourceId: "PVWatts", sourceVersion: "8" },
         properties: {
-          systemSize: { keyName: "systemSize", dataValue: recommendedSizeKw / 400 },
+          systemSize: { keyName: "systemSize", dataValue: estimatedMonthlyKwh },
           azimuth: { keyName: "azimuth", dataValue: "180" },
           losses: { keyName: "losses", dataValue: "15" },
           inverterEfficiency: { keyName: "inverterEfficiency", dataValue: "96" },
