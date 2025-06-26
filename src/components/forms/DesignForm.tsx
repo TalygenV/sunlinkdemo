@@ -231,10 +231,11 @@ export default function DesignForm({ onBack }: DesignFormProps) {
     if (!kwhCalcRes.ok) throw new Error(await kwhCalcRes.text());
     const kwhData = await kwhCalcRes.json();
     const pricePerKwh = kwhData?.results?.[0]?.summary?.kWh;
+const estimatedMonthlyKwh = kwhData?.results?.[0]?.summary?.kW;
     if (!pricePerKwh) throw new Error("kWh estimate not found.");
 
     // 4. Estimate system size in kW (used later for solar profile and display)
-    const estimatedMonthlyKwh = pricePerKwh / 1500;
+    
     const recommendedSizeKw = estimatedMonthlyKwh * 1000;
  await fetch(`${base_url}/rest/v1/profiles`, {
       method: "POST",
@@ -501,7 +502,6 @@ console.log("recommendedSizeKw",recommendedSizeKw);
 console.log("autocomplete",autocomplete);
       autocomplete.addListener("place_changed", async () => {
         const place = autocomplete.getPlace();
-        console.log("addressInputRef.current?.value",addressInputRef.current?.value);
         const address = addressInputRef.current?.value;
         const lataddress = place.geometry?.location?.lat();
         const lngaddress = place.geometry?.location?.lng();
