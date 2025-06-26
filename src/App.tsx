@@ -34,15 +34,13 @@ import { AnalyticsEvents, trackEvent } from "./lib/analytics";
 import OrderSummary from "./components/OrderSummary/OrderSummary";
 import InstallerContract from "./components/InstallerContract/InstallerContract";
 
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { ref, get } from "firebase/database";
 import { auth, db, firestore } from "./lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { useIdleTimer } from "./components/common/useIdleTimer";
-import { signOut } from "firebase/auth";
 
 // ---------------------------
-// ✅ Correct Context Types
+// ✅ Context Types
 // ---------------------------
 interface UserData {
   name: string;
@@ -72,7 +70,7 @@ export const FormContext = createContext<FormContextType>({
 });
 
 // ---------------------------
-// Route Controller Component
+// Route Controller
 // ---------------------------
 interface RouteControllerProps {
   isAuthenticated: boolean;
@@ -162,7 +160,7 @@ function App() {
           setIsInstaller(true);
         } else {
           setIsAdmin(false);
-          setIsInstaller(false); // in case it's a customer
+          setIsInstaller(false); // for customer
         }
 
         setUserData({
@@ -193,6 +191,7 @@ function App() {
       page_path: window.location.pathname,
     });
   }, []);
+
   const portalAccessProps = {
     isAuthenticated,
     isInstaller,
@@ -200,22 +199,6 @@ function App() {
     hasCompletedPurchase: true,
     isDataLoaded: initialDataLoaded,
   };
-  // Auto logout after 10 seconds of inactivity
-  // useIdleTimer(() => {
-  //
-  //   if (isAuthenticated) {
-  //     console.log("Auto-logout due to 10s inactivity");
-
-  //     (async () => {
-  //       try {
-  //         await signOut(auth);
-  //         window.location.href = "/";
-  //       } catch (error) {
-  //         console.error("Error signing out:", error);
-  //       }
-  //     })();
-  //   }
-  // }, 60 * 1000); // 60 seconds
 
   return (
     <FormContext.Provider
@@ -342,35 +325,44 @@ function App() {
 
             <Route path="/design-return" element={<CheckoutReturn />} />
 
+            {/* ✅ Updated Home Route */}
             <Route
               index
               element={
                 <RouteController
                   {...portalAccessProps}
                   homeComponent={
-                    <>
-                      <Hero />
-                      <AnimatePresence>
-                        {!showForm && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                          >
-                            <div id="why-sunlink">
-                              <InstallationSection />
-                            </div>
-                            <div id="plans-pricing">
-                              <SavingsSection />
-                            </div>
-                            <div id="contact">
-                              <ReviewSection />
-                              <ContactSection />
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </>
+                    isAuthenticated ? (
+                      isAdmin || isInstaller ? (
+                        <Navigate to="/installer/projects" replace />
+                      ) : (
+                        <Navigate to="/design" replace />
+                      )
+                    ) : (
+                      <>
+                        <Hero />
+                        <AnimatePresence>
+                          {!showForm && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                            >
+                              <div id="why-sunlink">
+                                <InstallationSection />
+                              </div>
+                              <div id="plans-pricing">
+                                <SavingsSection />
+                              </div>
+                              <div id="contact">
+                                <ReviewSection />
+                                <ContactSection />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    )
                   }
                   loadingComponent={<LoadingComponent />}
                 />
@@ -388,9 +380,6 @@ function App() {
 
 export default App;
 
-// ---------------------------
-// Utility Component
-// ---------------------------
 const LoadingComponent = () => (
   <div className="min-h-screen bg-black text-white flex items-center justify-center">
     Loading...
