@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../../lib/firebase';
-import { ref, get } from 'firebase/database';
-import { 
-  Home, 
-  BarChart3, 
-  FileText, 
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "../../lib/firebase";
+import { ref, get } from "firebase/database";
+import {
+  Home,
+  BarChart3,
+  FileText,
   MessageSquare,
   Users,
   ArrowRight,
@@ -15,13 +15,16 @@ import {
   X,
   Zap,
   BatteryCharging,
-  Sun
-} from 'lucide-react';
+  Sun,
+} from "lucide-react";
 
-import { CustomerPortalLayout } from './layout/CustomerPortalLayout';
-import { InstallationProgressTracker, InstallationStage } from './progress/InstallationProgressTracker';
-import { DocumentRepository } from './documents/DocumentRepository';
-import { SystemVisualization } from './visualization/SystemVisualization';
+import { CustomerPortalLayout } from "./layout/CustomerPortalLayout";
+import {
+  InstallationProgressTracker,
+  InstallationStage,
+} from "./progress/InstallationProgressTracker";
+import { DocumentRepository } from "./documents/DocumentRepository";
+import { SystemVisualization } from "./visualization/SystemVisualization";
 
 /**
  * Main CustomerPortal component
@@ -31,7 +34,8 @@ export const CustomerPortal: React.FC = () => {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentStage, setCurrentStage] = useState<InstallationStage>('siteSurveyApproval');
+  const [currentStage, setCurrentStage] =
+    useState<InstallationStage>("siteSurveyApproval");
   const [showSiteSurveyModal, setShowSiteSurveyModal] = useState(false);
   const navigate = useNavigate();
 
@@ -40,50 +44,50 @@ export const CustomerPortal: React.FC = () => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        
+
         // Get current user
         const user = auth.currentUser;
         if (!user) {
           // Redirect to login if not authenticated
-          navigate('/login');
+          navigate("/login");
           return;
         }
-        
+
         // Fetch user data from Firebase
         const userRef = ref(db, `users/${user.uid}`);
         const snapshot = await get(userRef);
-        
+
         if (snapshot.exists()) {
           const data = snapshot.val();
-          
+
           // Ensure the user has completed the purchase process (using depositPaid and submittedDesign)
           const hasPaidDeposit = data.depositPaid === true;
           const hasSubmittedDesign = data.submittedDesign === true;
           if (!hasPaidDeposit || !hasSubmittedDesign) {
-            navigate('/design');
+            navigate("/design");
             return;
           }
-          
+
           setUserData(data);
-          
+
           // Check if site survey has been submitted
           if (!data.sitesurveysubmitted) {
             setShowSiteSurveyModal(true);
           }
-          
+
           // Determine current installation stage
           if (data.progress) {
             const stageOrder: InstallationStage[] = [
-              'siteSurveyApproval', 
-              'hicContract', 
-              'installation', 
-              'interconnection', 
-              'service'
+              "siteSurveyApproval",
+              "hicContract",
+              "installation",
+              "interconnection",
+              "service",
             ];
-            
+
             // Find the last completed stage
             let lastCompletedStageIndex = -1;
-            
+
             for (let i = 0; i < stageOrder.length; i++) {
               const stageName = stageOrder[i];
               if (data.progress[stageName] && data.progress[stageName].date) {
@@ -92,50 +96,52 @@ export const CustomerPortal: React.FC = () => {
                 break;
               }
             }
-            
+
             // The current stage is the next one after the last completed
             // If no stages are completed, default to the first stage
-            const currentStageIndex = Math.min(lastCompletedStageIndex + 1, stageOrder.length - 1);
+            const currentStageIndex = Math.min(
+              lastCompletedStageIndex + 1,
+              stageOrder.length - 1
+            );
             setCurrentStage(stageOrder[currentStageIndex]);
           }
-          
         } else {
           // No user data found, redirect to design
-          navigate('/design');
+          navigate("/design");
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        setError('Failed to load your customer portal');
+        console.error("Error fetching user data:", error);
+        setError("Failed to load your customer portal");
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchUserData();
   }, [navigate]);
 
   // Format the user's address for display
   const formatAddress = (address: string): string => {
-    if (!address) return 'Your Project';
-    
+    if (!address) return "Your Project";
+
     // Split by commas and return first part (street address)
-    const parts = address.split(',');
+    const parts = address.split(",");
     return parts[0].trim();
   };
 
   // Format installation stage for display
   const formatStageName = (stage: InstallationStage): string => {
-    switch(stage) {
-      case 'siteSurveyApproval':
-        return 'Site Survey Approval';
-      case 'hicContract':
-        return 'HIC Contract';
-      case 'installation':
-        return 'Installation';
-      case 'interconnection':
-        return 'Interconnection';
-      case 'service':
-        return 'Service';
+    switch (stage) {
+      case "siteSurveyApproval":
+        return "Site Survey Approval";
+      case "hicContract":
+        return "HIC Contract";
+      case "installation":
+        return "Installation";
+      case "interconnection":
+        return "Interconnection";
+      case "service":
+        return "Service";
       default:
         return stage;
     }
@@ -144,18 +150,14 @@ export const CustomerPortal: React.FC = () => {
   // Calculate system size in kW
   const calculateSystemSize = (): number => {
     if (!userData?.panels) return 0;
-    
- 
-      
-      return userData.totalManualPanels * 400 / 1000;
-    
-    
+
+    return (userData.totalManualPanels * 400) / 1000;
+
     // Calculate total system size (assume 400W panels if wattage not specified)
-    
   };
   const calculatePanelOutput = (): number => {
     if (!userData?.panels) return 0;
-    return userData.totalManualPanels * 550 ;
+    return userData.totalManualPanels * 550;
   };
 
   // Render error state
@@ -165,7 +167,7 @@ export const CustomerPortal: React.FC = () => {
         <div className="w-full max-w-md p-8 bg-black/30 backdrop-blur-lg rounded-xl border border-red-500/20">
           <h2 className="text-2xl font-medium text-white mb-4">Error</h2>
           <p className="text-white/70 mb-6">{error}</p>
-          <button 
+          <button
             className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 rounded-lg text-white transition-colors"
             onClick={() => window.location.reload()}
           >
@@ -175,14 +177,18 @@ export const CustomerPortal: React.FC = () => {
       </div>
     );
   }
-const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() + userData?.name?.split(' ')[0]?.slice(1) || '';
+  const capitalizedName =
+    userData?.name?.split(" ")[0]?.charAt(0)?.toUpperCase() +
+      userData?.name?.split(" ")[0]?.slice(1) || "";
   return (
     <CustomerPortalLayout>
-    
       {/* Site Survey Modal */}
       <AnimatePresence>
         {showSiteSurveyModal && (
-          <div className="fixed inset-0 z-[999] flex items-center justify-center px-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-[999] flex items-center justify-center px-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -204,12 +210,12 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                 className="absolute -inset-1 rounded-3xl z-0"
                 animate={{
                   opacity: [0.3, 0.5, 0.3],
-                  scale: [1, 1.02, 1]
+                  scale: [1, 1.02, 1],
                 }}
                 transition={{
                   duration: 4,
                   repeat: Infinity,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-white/30 to-blue-500/20 rounded-3xl blur-xl" />
@@ -236,23 +242,26 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                     Site Survey Required
                   </h2>
                   <p className="text-white/70 mb-6">
-                    Before we can proceed with your installation, we need you to upload required site survey images of your property.
+                    Before we can proceed with your installation, we need you to
+                    upload required site survey images of your property.
                   </p>
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className="btn-sheen relative z-10 w-full h-[52px] flex items-center justify-center gap-3 px-8 text-white rounded-full shadow-xl transition-all duration-500 text-sm font-medium tracking-wider group"
                     onClick={() => {
                       setShowSiteSurveyModal(false);
                       setTimeout(() => {
-                        navigate('/portal/sitesurvey');
+                        navigate("/portal/sitesurvey");
                       }, 300);
                     }}
                   >
-                    <Upload size={18} className="group-hover:scale-110 transition-transform duration-300" />
+                    <Upload
+                      size={18}
+                      className="group-hover:scale-110 transition-transform duration-300"
+                    />
                     <span>Upload Site Survey Images</span>
                   </motion.button>
-
                 </div>
               </div>
             </motion.div>
@@ -266,8 +275,8 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
           <div className="relative">
             {/* Subtle background glow */}
             <div className="absolute -inset-1 bg-gradient-to-r from-white/5 via-transparent to-white/5 rounded-2xl blur-xl opacity-10" />
-            
-            <motion.div 
+
+            <motion.div
               className="relative p-8 bg-black/20 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -275,20 +284,20 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
             >
               {/* Subtle decorative element */}
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-              
+
               <div className="relative flex flex-col gap-6">
                 {/* User greeting and system info */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
                   <div className="space-y-1">
-                   
                     <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight text-white/90">
-                      Welcome Back, <span className="text-white/80">{capitalizedName}</span>
+                      Welcome Back,{" "}
+                      <span className="text-white/80">{capitalizedName}</span>
                     </h1>
                     <p className="text-gray-400 text-base">
                       {formatAddress(userData?.address)}
                     </p>
                   </div>
-                  
+
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -297,14 +306,16 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   >
                     <div className="h-2.5 w-2.5 rounded-full bg-white/70 animate-pulse" />
                     <div>
-                      <p className="text-gray-400 text-sm">Pending {formatStageName(currentStage)}</p>
+                      <p className="text-gray-400 text-sm">
+                        Pending {formatStageName(currentStage)}
+                      </p>
                     </div>
                   </motion.div>
                 </div>
-                
+
                 {/* Stats and metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
-                  <motion.div 
+                  <motion.div
                     className="bg-black/20 rounded-xl border border-white/10 p-5 flex items-center space-x-4 transition-all duration-300 ease-in-out"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -312,12 +323,16 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   >
                     <Zap size={28} className="text-white" />
                     <div className="pl-4 pr-2 border-l border-white/20">
-                      <p className="text-xs text-gray-400 uppercase tracking-widest">System Size</p>
-                      <p className="text-2xl font-light text-white tabular-nums">{calculateSystemSize()} kW</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-widest">
+                        System Size
+                      </p>
+                      <p className="text-2xl font-light text-white tabular-nums">
+                        {calculateSystemSize()} kW
+                      </p>
                     </div>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="bg-black/20 rounded-xl border border-white/10 p-5 flex items-center space-x-4 transition-all duration-300 ease-in-out"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -325,18 +340,25 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   >
                     <BatteryCharging size={28} className="text-white" />
                     <div className="pl-4 pr-2 border-l border-white/20">
-                      <p className="text-xs text-gray-400 uppercase tracking-widest">Battery Storage</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-widest">
+                        Battery Storage
+                      </p>
                       {userData?.batteryCount > 0 ? (
                         <p className="text-2xl font-light text-white tabular-nums">
-                          {userData.batteryCount} {userData.batteryCount === 1 ? 'Battery' : 'Batteries'}
+                          {userData.batteryCount}{" "}
+                          {userData.batteryCount === 1
+                            ? "Battery"
+                            : "Batteries"}
                         </p>
                       ) : (
-                        <p className="text-2xl font-light text-white/70">None Installed</p>
+                        <p className="text-2xl font-light text-white/70">
+                          None Installed
+                        </p>
                       )}
                     </div>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="bg-black/20 rounded-xl border border-white/10 p-5 flex items-center space-x-4 transition-all duration-300 ease-in-out"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -344,12 +366,16 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   >
                     <Zap size={28} className="text-white" />
                     <div className="pl-4 pr-2 border-l border-white/20">
-                      <p className="text-xs text-gray-400 uppercase tracking-widest">Annual Output</p>
-                      <p className="text-2xl font-light text-white tabular-nums">{(calculatePanelOutput()).toLocaleString()} kWh</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-widest">
+                        Annual Output
+                      </p>
+                      <p className="text-2xl font-light text-white tabular-nums">
+                        {calculatePanelOutput().toLocaleString()} kWh
+                      </p>
                     </div>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="bg-black/20 rounded-xl border border-white/10 p-5 flex items-center space-x-4 transition-all duration-300 ease-in-out"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -357,14 +383,16 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   >
                     <Sun size={28} className="text-white" />
                     <div className="pl-4 pr-2 border-l border-white/20">
-                      <p className="text-xs text-gray-400 uppercase tracking-widest">Solar Panels</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-widest">
+                        Solar Panels
+                      </p>
                       <p className="text-2xl font-light text-white tabular-nums">
                         {userData?.totalManualPanels} Panels
                       </p>
                     </div>
                   </motion.div>
                 </div>
-                
+
                 {/* Integrated System Visualization */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -372,32 +400,26 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className="mt-6"
                 >
-             
                   <div className="overflow-hidden  rounded-xl">
                     <SystemVisualization className="w-full" />
                   </div>
                 </motion.div>
-                
+
                 {/* Quick actions */}
-           
-               
               </div>
             </motion.div>
           </div>
         </section>
-        
+
         {/* Installation Progress Tracker */}
-        
-        
+
         {/* Recent Documents */}
-       
-        
+
         {/* Quick Actions */}
-       
-        
+
         {/* Support Contact */}
         <section>
-          <motion.div 
+          <motion.div
             className="p-6 bg-black/20 rounded-xl border border-white/10 shadow-xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -409,13 +431,14 @@ const capitalizedName = userData?.name?.split(' ')[0]?.charAt(0)?.toUpperCase() 
                   Need Assistance?
                 </h2>
                 <p className="text-gray-400">
-                  Contact your dedicated support team for any questions about your solar system.
+                  Contact your dedicated support team for any questions about
+                  your solar system.
                 </p>
               </div>
-              
-              <button 
+
+              <button
                 className="px-6 py-3 bg-white/10 hover:bg-white/15 rounded-lg text-white border border-white/10 transition-colors flex items-center gap-2 whitespace-nowrap"
-                onClick={() => navigate('/portal/support')}
+                onClick={() => navigate("/portal/support")}
               >
                 <MessageSquare size={18} />
                 <span>Contact Support</span>

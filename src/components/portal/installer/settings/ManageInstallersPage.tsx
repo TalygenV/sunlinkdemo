@@ -53,8 +53,9 @@ export const ManageInstallersPage: React.FC<ManageRegionsPageProps> = ({
   const [addInstallerOpen, setAddInstallerOpen] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const fetchData = async () => {
+  const fetchInstallers = async () => {
     try {
+      debugger;
       // 1. Fetch all installers
       const installersQuery = query(
         collection(firestore, "users"),
@@ -132,7 +133,7 @@ export const ManageInstallersPage: React.FC<ManageRegionsPageProps> = ({
   };
 
   useEffect(() => {
-    fetchData();
+    fetchInstallers();
   }, []);
 
   const installerNameMap = useMemo(() => {
@@ -160,6 +161,7 @@ export const ManageInstallersPage: React.FC<ManageRegionsPageProps> = ({
     installerId: string;
     previousInstallerId?: string;
   }) => {
+    debugger;
     const { type, code, name, installerId, previousInstallerId } = data;
     const updates: Record<string, any> = {
       [`/regionAssignments/${type}/${code}`]: {
@@ -184,7 +186,7 @@ export const ManageInstallersPage: React.FC<ManageRegionsPageProps> = ({
       onClose();
     }, 3000);
     // ✅ Fetch fresh data after save
-    fetchData();
+
     closeModal();
   };
 
@@ -206,7 +208,7 @@ export const ManageInstallersPage: React.FC<ManageRegionsPageProps> = ({
       );
 
       // ✅ Optional: You may also want to refresh data after delete
-      fetchData();
+      fetchInstallers();
 
       // ✅ Optional: Show success message
       console.log("✅ Region deleted successfully");

@@ -287,6 +287,7 @@ export default function SignInModal({
           },
           { merge: true }
         );
+        localStorage.setItem("uidGlobal", user.uid);
         console.log("emailGlobal", user.email || "");
         localStorage.setItem("emailGlobal", user.email || "");
         console.log("nameGlobal", user.displayName || "");
@@ -303,6 +304,7 @@ export default function SignInModal({
 
         const userData = userDoc.exists() ? userDoc.data() : null;
         const userRole = userData?.role || "Customer";
+        localStorage.setItem("uidGlobal", userCredential.user.uid);
         console.log("emailGlobal", userCredential.user.email || "");
         localStorage.setItem("emailGlobal", userCredential.user.email || "");
         console.log("nameGlobal", userCredential.user.displayName || "");
