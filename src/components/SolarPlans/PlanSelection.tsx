@@ -295,8 +295,6 @@ function PlanSelection({
         </div>
       )}
 
-      
-
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
           <h2 className="text-2xl font-bold">System Price & Payment Options</h2>

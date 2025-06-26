@@ -13,6 +13,10 @@ declare module 'firebase-functions' {
     }
 
     function onCall(handler: (data: any, context: CallableContext) => Promise<any>): any;
+
+    export function onRequest(arg0: (req: any, res: any) => Promise<void>) {
+      throw new Error("Function not implemented.");
+    }
   }
 
   namespace logger {

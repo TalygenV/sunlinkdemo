@@ -6,6 +6,8 @@ import * as functions from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
 import Stripe from "stripe";
+import * as fs from 'fs';
+import * as docusign from 'docusign-esign';
 
 // Load environment variables
 dotenv.config();
@@ -13,6 +15,15 @@ dotenv.config();
 // Initialize Firebase Admin
 admin.initializeApp();
 const corsHandler = cors({ origin: true });
+
+const integratorKey = process.env.DOCUSIGN_CLIENT_ID;
+const userId = process.env.DOCUSIGN_USER_ID;
+const accountId = process.env.DOCUSIGN_ACCOUNT_ID;
+const basePath = 'https://demo.docusign.net/restapi';
+const privateKey = fs.readFileSync('./private.key');
+const SCOPES = ['signature', 'impersonation'];
+
+
 
 // Type declarations for better code organization
 interface SurveyResponse {
@@ -678,94 +689,234 @@ exports.testCallable = functions.https.onCall(async (data, context) => {
   return { message: "This works!" };
 });
 
-// Mosaic API Configuration
-const mosaicAuthUrl = defineString("mosaic.auth_url");
-const mosaicAudience = defineString("mosaic.audience");
-const mosaicClientId = defineString("mosaic.client_id");
-const mosaicClientSecret = defineString("mosaic.client_secret");
-const mosaicApiBase = defineString("mosaic.api_base");
+export const createSigningLink = functions.https.onRequest(async (req, res) => {
+  
+  // CORS Headers
+  res.set("Access-Control-Allow-Origin", "*"); // In production, replace * with your domain
+  res.set("Access-Control-Allow-Headers", "Content-Type");
 
-async function getMosaicAccessToken() {
-  if (
-    !mosaicAuthUrl.value() ||
-    !mosaicAudience.value() ||
-    !mosaicClientId.value() ||
-    !mosaicClientSecret.value()
-  ) {
-    throw new HttpsError("internal", "Missing Mosaic API configuration");
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   try {
-    const response = await axios.post(mosaicAuthUrl.value(), {
-      grant_type: "client_credentials",
-      audience: mosaicAudience.value(),
-      client_id: mosaicClientId.value(),
-      client_secret: mosaicClientSecret.value(),
-    });
-    return (response.data as { access_token: string }).access_token;
-  } catch (error) {
-    functions.logger.error("Mosaic authentication error", {
-      error: error.message,
-      details: error.response?.data,
-    });
-    throw new HttpsError("internal", "Failed to authenticate with Mosaic API");
-  }
-}
+    const { signerName, signerEmail, returnUrl, templateId } = req.body;
 
-// 1. Get Mosaic Loan Products
-exports.getMosaicLoanProducts = onCall(async (request) => {
-  try {
-    if (!mosaicApiBase.value()) {
-      throw new HttpsError("internal", "Missing Mosaic API base URL");
+    if (!templateId) {
+      return res.status(400).json({ error: "templateId is required" });
     }
 
-    const accessToken = await getMosaicAccessToken();
-    const res = await axios.get(`${mosaicApiBase.value()}/loan-products`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    return { success: true, products: res.data };
-  } catch (error) {
-    functions.logger.error("Mosaic loan products error", {
-      error: error.message,
-      details: error.response?.data,
-    });
-    return {
-      success: false,
-      message: error.message,
-      details: error.response?.data,
+    const apiClient = new docusign.ApiClient();
+    apiClient.setOAuthBasePath("account-d.docusign.com");
+
+    const results = await apiClient.requestJWTUserToken(
+      integratorKey,
+      userId,
+      ["signature", "impersonation"],
+      privateKey,
+      3600
+    );
+
+    const accessToken = results.body.access_token;
+    apiClient.setBasePath(basePath);
+    apiClient.addDefaultHeader("Authorization", `Bearer ${accessToken}`);
+
+    const envelopesApi = new docusign.EnvelopesApi(apiClient);
+
+    const envelopeDefinition = {
+      templateId,
+      templateRoles: [
+        {
+          email: signerEmail,
+          name: signerName,
+          roleName: "Signer",
+          clientUserId: "1001",
+        },
+      ],
+      status: "sent",
     };
+
+    const envelope = await envelopesApi.createEnvelope(accountId, {
+      envelopeDefinition,
+    });
+
+    const viewRequest = {
+      authenticationMethod: "none",
+      clientUserId: "1001",
+      recipientId: "1",
+      returnUrl,
+      userName: signerName,
+      email: signerEmail,
+    };
+
+    const result = await envelopesApi.createRecipientView(
+      accountId,
+      envelope.envelopeId!,
+      { recipientViewRequest: viewRequest }
+    );
+
+    return res.status(200).json({ url: result.url });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to create signing link" });
   }
 });
 
-// 2. Get Mosaic Payment Estimate
-exports.getMosaicPaymentEstimate = functions.https.onCall(
-  async (data, context) => {
-    try {
-      const { productId, amount } = data;
-      if (!productId || !amount) {
-        throw new functions.https.HttpsError(
-          "invalid-argument",
-          "productId and amount are required"
-        );
-      }
-      const accessToken = await getMosaicAccessToken();
-      // Replace with the actual endpoint for payment estimate (example path)
-      const res = await axios.post(
-        `${mosaicApiBase.value()}/payment-estimate`,
-        { productId, amount },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      return { success: true, estimate: res.data };
-    } catch (error) {
-      functions.logger.error("Mosaic payment estimate error", {
-        error: error.message,
-        details: error.response?.data,
-      });
-      return {
-        success: false,
-        message: error.message,
-        details: error.response?.data,
-      };
-    }
-  }
-);
+// export const createSignigLink = functions.https.onCall(async (data, context) => {
+//   try {
+//     const { signerName, signerEmail, returnUrl, templateId } = data;
+
+//     if (!templateId) {
+//       throw new functions.https.HttpsError('invalid-argument', 'templateId is required');
+//     }
+
+//     const apiClient = new docusign.ApiClient();
+//     apiClient.setOAuthBasePath('account-d.docusign.com');
+
+//     const results = await apiClient.requestJWTUserToken(
+//       integratorKey,
+//       userId,
+//       ['signature', 'impersonation'],
+//       privateKey,
+//       3600
+//     );
+
+//     const accessToken = results.body.access_token;
+//     apiClient.setBasePath(basePath);
+//     apiClient.addDefaultHeader('Authorization', `Bearer ${accessToken}`);
+
+//     const envelopesApi = new docusign.EnvelopesApi(apiClient);
+
+//     const envelopeDefinition = {
+//       templateId,
+//       templateRoles: [
+//         {
+//           email: signerEmail,
+//           name: signerName,
+//           roleName: 'Signer', 
+//           clientUserId: '1001'
+//         }
+//       ],
+//       status: 'sent'
+//     };
+
+//     const envelope = await envelopesApi.createEnvelope(accountId, { envelopeDefinition });
+
+//     const viewRequest = {
+//       authenticationMethod: 'none',
+//       clientUserId: '1001',
+//       recipientId: '1',
+//       returnUrl,
+//       userName: signerName,
+//       email: signerEmail
+//     };
+
+//     const result = await envelopesApi.createRecipientView(accountId, envelope.envelopeId!, { recipientViewRequest: viewRequest });
+
+//     return { url: result.url };
+
+//   } catch (error) {
+//     console.error(error);
+//     throw new functions.https.HttpsError('internal', 'Failed to create signing link');
+//   }
+// });
+
+
+
+
+// // Mosaic API Configuration
+// const mosaicAuthUrl = defineString("mosaic.auth_url");n
+// const mosaicAudience = defineString("mosaic.audience");
+// const mosaicClientId = defineString("mosaic.client_id");
+// const mosaicClientSecret = defineString("mosaic.client_secret");
+// const mosaicApiBase = defineString("mosaic.api_base");
+
+// async function getMosaicAccessToken() {
+//   if (
+//     !mosaicAuthUrl.value() ||
+//     !mosaicAudience.value() ||
+//     !mosaicClientId.value() ||
+//     !mosaicClientSecret.value()
+//   ) {
+//     throw new HttpsError("internal", "Missing Mosaic API configuration");
+//   }
+
+//   try {
+//     const response = await axios.post(mosaicAuthUrl.value(), {
+//       grant_type: "client_credentials",
+//       audience: mosaicAudience.value(),
+//       client_id: mosaicClientId.value(),
+//       client_secret: mosaicClientSecret.value(),
+//     });
+//     return (response.data as { access_token: string }).access_token;
+//   } catch (error) {
+//     functions.logger.error("Mosaic authentication error", {
+//       error: error.message,
+//       details: error.response?.data,
+//     });
+//     throw new HttpsError("internal", "Failed to authenticate with Mosaic API");
+//   }
+// }
+
+// // 1. Get Mosaic Loan Products
+// exports.getMosaicLoanProducts = onCall(async (request) => {
+//   try {
+//     if (!mosaicApiBase.value()) {
+//       throw new HttpsError("internal", "Missing Mosaic API base URL");
+//     }
+
+//     const accessToken = await getMosaicAccessToken();
+//     const res = await axios.get(`${mosaicApiBase.value()}/loan-products`, {
+//       headers: { Authorization: `Bearer ${accessToken}` },
+//     });
+//     return { success: true, products: res.data };
+//   } catch (error) {
+//     functions.logger.error("Mosaic loan products error", {
+//       error: error.message,
+//       details: error.response?.data,
+//     });
+//     return {
+//       success: false,
+//       message: error.message,
+//       details: error.response?.data,
+//     };
+//   }
+// });
+
+// // 2. Get Mosaic Payment Estimate
+// exports.getMosaicPaymentEstimate = functions.https.onCall(
+//   async (data, context) => {
+//     try {
+//       const { productId, amount } = data;
+//       if (!productId || !amount) {
+//         throw new functions.https.HttpsError(
+//           "invalid-argument",
+//           "productId and amount are required"
+//         );
+//       }
+//       const accessToken = await getMosaicAccessToken();
+//       // Replace with the actual endpoint for payment estimate (example path)
+//       const res = await axios.post(
+//         `${mosaicApiBase.value()}/payment-estimate`,
+//         { productId, amount },
+//         { headers: { Authorization: `Bearer ${accessToken}` } }
+//       );
+//       return { success: true, estimate: res.data };
+//     } catch (error) {
+//       functions.logger.error("Mosaic payment estimate error", {
+//         error: error.message,
+//         details: error.response?.data,
+//       });
+//       return {
+//         success: false,
+//         message: error.message,
+//         details: error.response?.data,
+//       };
+//     }
+//   }
+// );
