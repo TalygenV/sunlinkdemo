@@ -50,46 +50,21 @@ export const RegionModal: React.FC<RegionModalProps> = ({
   // Fetch installers
   useEffect(() => {
     const fetchInstallers = async () => {
-      debugger;
       try {
         const installersQuery = query(
           collection(firestore, "users"),
           where("role", "==", "Installer")
         );
         const querySnapshot = await getDocs(installersQuery);
-
-        const installersArray: {
-          id: string;
-          name?: string;
-          companyName?: string;
-        }[] = [];
-
-        for (const doc of querySnapshot.docs) {
+        const installersArray = querySnapshot.docs.map((doc) => {
           const data = doc.data();
-          const id = doc.id;
-
-          // Check in Realtime Database if installer is already mapped
-          const path = `installerRegionMapping/${id}`;
-          const snapshot = await get(ref(db, path));
-          const mapping = snapshot.val();
-
-          const alreadyMapped =
-            mapping?.zip || mapping?.city || mapping?.county || mapping?.state;
-
-          // Add only if not already mapped or if it's the current installer in editing mode
-          const isCurrent = initial?.installerId === id;
-
-          if (!alreadyMapped || isCurrent) {
-            installersArray.push({
-              id,
-              name: data.email || "Unknown",
-              companyName: data.role || "Installer",
-            });
-          }
-        }
-
+          return {
+            id: doc.id,
+            name: data.email || "Unknown",
+            companyName: data.role || "Installer",
+          };
+        });
         setInstallers(installersArray);
-
         if (!installerId && installersArray.length > 0) {
           setInstallerId(installersArray[0].id);
         }
@@ -106,7 +81,6 @@ export const RegionModal: React.FC<RegionModalProps> = ({
   const goBack = () => (step === 1 || isEditing ? onClose() : setStep(1));
 
   const handleSave = async () => {
-    debugger;
     const user = getAuth().currentUser;
     console.log("Logged in user UID:", user?.uid);
 

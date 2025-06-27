@@ -240,7 +240,6 @@ export default function AuthModal({
           // window.emailGlobal = user.email; // Store email globally for later use
           console.log("emailGlobal", user.email);
           localStorage.setItem("emailGlobal", user.email);
-          localStorage.setItem("uidGlobal", user.uid);
           // alert("User successfully added");
         } catch (error) {
           alert("error");

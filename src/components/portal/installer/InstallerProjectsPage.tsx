@@ -111,7 +111,6 @@ export const InstallerProjectsPage: React.FC<InstallerProjectsPageProps> = ({
   // Fetch projects based on user role
   useEffect(() => {
     const fetchProjects = async () => {
-      debugger;
       try {
         setLoading(true);
         // Get current user
@@ -123,7 +122,7 @@ export const InstallerProjectsPage: React.FC<InstallerProjectsPageProps> = ({
         if (isAdmin) {
           // Admin: Fetch all projects from all installers
           const allProjects: Project[] = [];
-          const installersRef = ref(db, "users");
+          const installersRef = ref(db, "installers");
           const installersSnapshot = await get(installersRef);
 
           if (installersSnapshot.exists()) {

@@ -361,8 +361,7 @@ const analysis = await fetch(`${base_url}/rest/v1/accounts/analysis`, {
 
     if (!analysis.ok) throw new Error(await analysis.text());
     const analysisData = await analysis.json();
-   // Pull only the first result
-const seriesResult = analysisData?.results?.[0];
+    console.log("test ",analysisData);
 
       const estimatedAnnualSavings =
         estimatedMonthlyKwh * 12 * pricePerKwh * 0.8; // 80% savings
@@ -382,11 +381,7 @@ console.log("recommendedSizeKw",recommendedSizeKw);
         recommendedSizeKw,
         estimatedAnnualSavings,
         providerAccountId,
-        penalCount,
-        seriesData: {
-    series: seriesResult?.series || [],
-    seriesData: seriesResult?.seriesData || [],
-  },
+        penalCount
       };
     } catch (error: unknown) {
       console.error("Genability API error:", error);
