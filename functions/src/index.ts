@@ -6,8 +6,8 @@ import * as functions from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
 import Stripe from "stripe";
-import * as fs from 'fs';
-import * as docusign from 'docusign-esign';
+import * as fs from "fs";
+import * as docusign from "docusign-esign";
 
 // Load environment variables
 dotenv.config();
@@ -19,11 +19,9 @@ const corsHandler = cors({ origin: true });
 const integratorKey = process.env.DOCUSIGN_CLIENT_ID;
 const userId = process.env.DOCUSIGN_USER_ID;
 const accountId = process.env.DOCUSIGN_ACCOUNT_ID;
-const basePath = 'https://demo.docusign.net/restapi';
-const privateKey = fs.readFileSync('./private.key');
-const SCOPES = ['signature', 'impersonation'];
-
-
+const basePath = "https://demo.docusign.net/restapi";
+const privateKey = fs.readFileSync("./private.key");
+const SCOPES = ["signature", "impersonation"];
 
 // Type declarations for better code organization
 interface SurveyResponse {
@@ -690,7 +688,6 @@ exports.testCallable = functions.https.onCall(async (data, context) => {
 });
 
 export const createSigningLink = functions.https.onRequest(async (req, res) => {
-  
   // CORS Headers
   res.set("Access-Control-Allow-Origin", "*"); // In production, replace * with your domain
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -798,7 +795,7 @@ export const createSigningLink = functions.https.onRequest(async (req, res) => {
 //         {
 //           email: signerEmail,
 //           name: signerName,
-//           roleName: 'Signer', 
+//           roleName: 'Signer',
 //           clientUserId: '1001'
 //         }
 //       ],
@@ -825,9 +822,6 @@ export const createSigningLink = functions.https.onRequest(async (req, res) => {
 //     throw new functions.https.HttpsError('internal', 'Failed to create signing link');
 //   }
 // });
-
-
-
 
 // // Mosaic API Configuration
 // const mosaicAuthUrl = defineString("mosaic.auth_url");n
