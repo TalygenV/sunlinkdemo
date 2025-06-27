@@ -5,11 +5,12 @@ import {
   Sun,
   TrendingUp
 } from "lucide-react";
-import { useState ,useEffect} from "react";
+import { useState, useEffect } from "react";
 import { Cpu as SolarPanel } from "react-feather";
 import SystemDesign from "../design/SystemDesign";
 import { AuthModal } from "../ui/modals";
 import NumberAnimation from "../ui/NumberAnimation";
+import EnergyCharts from '../forms/EnergyCharts';
 
 
 export default function CallToAction({
@@ -18,13 +19,15 @@ export default function CallToAction({
   onContinue,
   onBack,
 }: CallToActionProps) {
-    const [kwhData, setKwhData] = useState<any>(null);
+
+
+  const [kwhData, setKwhData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const base_url = "https://api.genability.com";
   const basic_token =
     "NjQ2M2ZmM2EtMTJjZS00MjQ0LWFiMTEtMWQwOTZiNTQwN2M1OjFkMGM5NTI4LTU1NDktNDhhMy1iYTg5LTZkMWJlYTllMzllNQ==";
-    useEffect(() => {
+  useEffect(() => {
     const fetchAnalysis = async () => {
       try {
         const res = await fetch(
@@ -40,25 +43,25 @@ export default function CallToAction({
 
         if (!res.ok) throw new Error(await res.text());
         const json = await res.json();
-          const series = json?.results?.[0]?.series || [];
+        const series = json?.results?.[0]?.series || [];
 
-      const savingsMonthly = series.find(
-        (s: any) => s.displayLabel === "Total Savings (Mo/Year 1)"
-      );
-      const savingsLifetime = series.find(
-        (s: any) => s.displayLabel === "Total Savings (Lifetime)"
-      );
+        const savingsMonthly = series.find(
+          (s: any) => s.displayLabel === "Total Savings (Mo/Year 1)"
+        );
+        const savingsLifetime = series.find(
+          (s: any) => s.displayLabel === "Total Savings (Lifetime)"
+        );
 
-      console.log("💰 Monthly Savings:", savingsMonthly?.cost);
-      console.log("💰 Lifetime Savings:", savingsLifetime?.cost);
+        console.log("💰 Monthly Savings:", savingsMonthly?.cost);
+        console.log("💰 Lifetime Savings:", savingsLifetime?.cost);
 
-      // Optionally, store in state:
-      setKwhData({
-        monthly: savingsMonthly?.cost ?? 0,
-        lifetime: savingsLifetime?.cost ?? 0,
-      });
-      const today = new Date().toISOString().split("T")[0];
-      const result = await fetch(
+        // Optionally, store in state:
+        setKwhData({
+          monthly: savingsMonthly?.cost ?? 0,
+          lifetime: savingsLifetime?.cost ?? 0,
+        });
+        const today = new Date().toISOString().split("T")[0];
+        const result = await fetch(
           `${base_url}/rest/v1/incentives?addressString=${data.name}&customerClasses=RESIDENTIAL&effectiveOn=${today}`,
           {
             method: "GET",
@@ -70,12 +73,12 @@ export default function CallToAction({
         );
         const getRateResult = await result.json();
 
-if (getRateResult.status === "success" && getRateResult.results && getRateResult.results.length > 0) {
-  const rate = getRateResult.results[0].rate;
-  
-} else {
-  console.log("No incentive data found");
-}
+        if (getRateResult.status === "success" && getRateResult.results && getRateResult.results.length > 0) {
+          const rate = getRateResult.results[0].rate;
+
+        } else {
+          console.log("No incentive data found");
+        }
       } catch (err: any) {
         console.error("Error fetching analyses:", err);
         setError(err.message || "Unknown error");
@@ -169,7 +172,7 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
   const bestAnalysis = validAnalyses
     .filter((analysis: any) => analysis.panelConfigIndex >= 0)
     .reduce((best: any, current: any) => {
-      console.log("current",current);
+      console.log("current", current);
       if (!data.targetMonthlyBill) {
         // Fallback to highest savings if no monthly bill provided
         const currentSavings =
@@ -297,7 +300,7 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
   // Get the selected panel configuration
   const selectedConfig =
     data.solarPotential?.solarPanelConfigs[bestAnalysis.panelConfigIndex];
-    console.log("selectedConfig",selectedConfig);
+  console.log("selectedConfig", selectedConfig);
   annualProduction = selectedConfig?.yearlyEnergyDcKwh || 0;
   panelCount = selectedConfig?.panelsCount || 0;
 
@@ -355,57 +358,57 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Savings Card */}
             {kwhData && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="z-10 shadow-[0_0_25px_5px_rgba(255,255,255,0.03)] transition-all duration-500 overflow-hidden rounded-2xl p-6 border border-white/10 relative"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/[0.03] via-transparent to-white/[0.03] pointer-events-none" />
-              <div className="flex items-start justify-between mb-6 ">
-                <div>
-                  <h3 className="text-2xl font-light text-white mb-2">
-                    25 Year Savings
-                  </h3>
-                  <p className="text-gray-400">Total financial benefit</p>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="z-10 shadow-[0_0_25px_5px_rgba(255,255,255,0.03)] transition-all duration-500 overflow-hidden rounded-2xl p-6 border border-white/10 relative"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.03] via-transparent to-white/[0.03] pointer-events-none" />
+                <div className="flex items-start justify-between mb-6 ">
+                  <div>
+                    <h3 className="text-2xl font-light text-white mb-2">
+                      25 Year Savings
+                    </h3>
+                    <p className="text-gray-400">Total financial benefit</p>
+                  </div>
+                  <DollarSign className="w-6 h-6 text-purple-400 text-glow-purple icon-glow-purple" />
                 </div>
-                <DollarSign className="w-6 h-6 text-purple-400 text-glow-purple icon-glow-purple" />
-              </div>
-              <div className="text-4xl md:text-5xl font-light text-white mb-4">
-                {parseInt(kwhData.lifetime) < 0 ? (
-  <span>
-    ({<NumberAnimation value={Math.abs(parseInt(kwhData.lifetime))} prefix="$" />})
-  </span>
-) : (
-  <NumberAnimation value={parseInt(kwhData.lifetime)} prefix="$" />
-)}
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-purple-400 text-glow-purple">
-                  <TrendingUp className="w-4 h-4 icon-glow-purple" />
-                  <span className="text-sm">
-                    {parseInt(kwhData.monthly) < 0 ? (
-  <span>
-    ({<NumberAnimation value={Math.abs(parseInt(kwhData.monthly))} prefix="$" />})
-  </span>
-) : (
-  <NumberAnimation value={parseInt(kwhData.monthly)} prefix="$" />
-)}{" "}
-                    in first year
-                  </span>
+                <div className="text-4xl md:text-5xl font-light text-white mb-4">
+                  {parseInt(kwhData.lifetime) < 0 ? (
+                    <span>
+                      ({<NumberAnimation value={Math.abs(parseInt(kwhData.lifetime))} prefix="$" />})
+                    </span>
+                  ) : (
+                    <NumberAnimation value={parseInt(kwhData.lifetime)} prefix="$" />
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-accent-400 text-glow-accent">
-                  <DollarSign className="w-4 h-4 icon-glow-accent" />
-                  <span className="text-sm">
-                    <NumberAnimation
-                      value={0}
-                      prefix="$"
-                    />{" "}
-                    federal tax credit
-                  </span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-purple-400 text-glow-purple">
+                    <TrendingUp className="w-4 h-4 icon-glow-purple" />
+                    <span className="text-sm">
+                      {parseInt(kwhData.monthly) < 0 ? (
+                        <span>
+                          ({<NumberAnimation value={Math.abs(parseInt(kwhData.monthly))} prefix="$" />})
+                        </span>
+                      ) : (
+                        <NumberAnimation value={parseInt(kwhData.monthly)} prefix="$" />
+                      )}{" "}
+                      in first year
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-accent-400 text-glow-accent">
+                    <DollarSign className="w-4 h-4 icon-glow-accent" />
+                    <span className="text-sm">
+                      <NumberAnimation
+                        value={0}
+                        prefix="$"
+                      />{" "}
+                      federal tax credit
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
             )}
 
             {/* Solar Production Card */}
@@ -440,6 +443,8 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
               </div>
             </motion.div>
           </div>
+
+          <EnergyCharts data={data.seriesData} />
 
           {/* Timeline */}
           {/* <motion.div
@@ -510,8 +515,8 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
               </motion.button>
             </div> */}
 
-            {/* Continue Button with Glow Effect */}
-            {/* <div className="relative">
+          {/* Continue Button with Glow Effect */}
+          {/* <div className="relative">
               <motion.div
                 className="absolute -inset-1 rounded-full z-0"
                 animate={{
@@ -538,15 +543,15 @@ if (getRateResult.status === "success" && getRateResult.results && getRateResult
               </motion.button>
             </div>
           </div> */}
-  <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowAuthModal(true)}
-                className="btn-sheen relative z-10 w-full h-[52px] flex items-center justify-center gap-3 text-white rounded-full shadow-xl transition-all duration-500 border border-white/10 text-sm font-medium tracking-wider group"
-              >
-          <button className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white text-lg font-medium rounded-xl transition-all duration-300 flex items-center justify-center group">Continue to Design<span className="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span></button></motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowAuthModal(true)}
+            className="btn-sheen relative z-10 w-full h-[52px] flex items-center justify-center gap-3 text-white rounded-full shadow-xl transition-all duration-500 border border-white/10 text-sm font-medium tracking-wider group"
+          >
+            <button className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white text-lg font-medium rounded-xl transition-all duration-300 flex items-center justify-center group">Continue to Design<span className="ml-2 group-hover:translate-x-1 transition-transform duration-300">→</span></button></motion.button>
         </div>
-        
+
       </div>
       {/* Render SystemDesign component behind the AuthModal if userData exists */}
       {userData && (
